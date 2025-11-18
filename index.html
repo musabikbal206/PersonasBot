@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Persona Bot - Ultimate Edition</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Dynamic Viewport Height */
+        body { height: 100vh; height: 100dvh; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #52525b; }
+        
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(15px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .message-animate { animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+            20%, 40%, 60%, 80% { transform: translateX(4px); }
+        }
+        .shake-animate { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+
+        input, textarea, select { font-size: 16px !important; }
+        * { -webkit-tap-highlight-color: transparent; }
+
+        /* Premium UI Elements */
+        .gold-gradient { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .gold-text { background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        /* Notification Dot Animation */
+        @keyframes ping {
+            75%, 100% { transform: scale(2); opacity: 0; }
+        }
+        .animate-ping-slow { animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+
+        /* Action buttons for custom personas */
+        .action-btn { opacity: 0; transform: translateX(10px); transition: all 0.2s ease; }
+        .persona-item:hover .action-btn { opacity: 1; transform: translateX(0); }
+        @media (hover: none) { .action-btn { opacity: 1; transform: translateX(0); } }
+    </style>
+</head>
+<body class="bg-zinc-950 font-sans antialiased text-zinc-100 flex overflow-hidden selection:bg-orange-500/30">
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md transition-opacity duration-200">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm shadow-2xl m-4 relative overflow-hidden flex flex-col">
+            <div class="h-1 w-full bg-gradient-to-r from-orange-500 via-red-500 to-purple-600"></div>
+            <div class="flex p-2 bg-zinc-950 border-b border-zinc-800 gap-2">
+                <button onclick="switchAuthTab('login')" id="tab-login" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2">Sign In</button>
+                <button onclick="switchAuthTab('register')" id="tab-register" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2">Create Account</button>
+            </div>
+            <div class="p-8">
+                <div class="text-center mb-6">
+                    <div class="text-4xl mb-2 filter drop-shadow-lg">🔐</div>
+                    <h2 id="auth-title" class="text-xl font-bold text-white">Welcome Back</h2>
+                    <p id="auth-desc" class="text-zinc-500 text-xs mt-2">Enter your credentials to access your personas.</p>
+                </div>
+                <form id="auth-form" class="space-y-4">
+                    <div class="relative group">
+                        <input type="email" id="auth-email" required placeholder="Email Address" class="w-full bg-black/50 border border-zinc-700 text-white pl-4 pr-4 py-3 rounded-xl focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-zinc-600">
+                    </div>
+                    <div class="relative group">
+                        <input type="password" id="auth-password" required placeholder="Password" class="w-full bg-black/50 border border-zinc-700 text-white pl-4 pr-12 py-3 rounded-xl focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-zinc-600">
+                        <button type="button" id="toggle-pass-btn" class="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-500 hover:text-zinc-300">
+                            <span class="text-xs font-bold">SHOW</span>
+                        </button>
+                    </div>
+                    <button type="submit" id="auth-submit-btn" class="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white py-3.5 rounded-xl font-bold shadow-lg transition-all active:scale-[0.98] mt-2 flex items-center justify-center gap-2">
+                        <span>Sign In</span>
+                    </button>
+                </form>
+                <div id="auth-error" class="mt-4 bg-red-500/10 border border-red-500/20 rounded-lg p-3 hidden">
+                    <p class="text-red-400 text-xs text-center flex items-center justify-center gap-2"><span id="auth-error-text">Error</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications Modal -->
+    <div id="notif-modal" class="fixed inset-0 z-[75] flex items-start justify-end p-4 pointer-events-none opacity-0 transition-opacity duration-200">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-xs shadow-2xl pointer-events-auto mt-14 mr-2 transform transition-all">
+            <div class="p-4 border-b border-zinc-800 flex justify-between items-center">
+                <h3 class="text-sm font-bold text-white">Notifications</h3>
+                <button onclick="toggleNotifModal(false)" class="text-zinc-500 hover:text-white"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div id="notif-list" class="max-h-[300px] overflow-y-auto custom-scrollbar p-2 space-y-2">
+                <!-- Dynamic Notifications -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm hidden transition-opacity duration-200 opacity-0">
+        <div class="bg-zinc-900 border border-zinc-800/50 rounded-2xl p-6 w-full max-w-md shadow-2xl transform scale-95 transition-transform duration-200 m-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2"><span class="text-zinc-400">⚙️</span> Settings</h2>
+                <button id="close-settings-btn" class="text-zinc-500 hover:text-zinc-300 p-2 rounded-full hover:bg-zinc-800"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+
+            <div class="mb-6 bg-zinc-950/50 rounded-xl p-4 border border-zinc-800">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-lg">👤</div>
+                    <div class="flex-1 min-w-0">
+                        <div id="user-email-display" class="font-medium text-sm truncate text-white">user@example.com</div>
+                        <div id="user-status-display" class="text-xs text-zinc-500">Free Account</div>
+                    </div>
+                </div>
+                <button id="logout-btn" class="w-full text-xs bg-red-900/20 hover:bg-red-900/40 text-red-300 py-2 rounded-lg transition-colors border border-red-900/30">Sign Out</button>
+            </div>
+
+            <!-- Admin Dashboard -->
+            <div id="admin-dashboard" class="hidden mb-6 space-y-4">
+                <div class="bg-zinc-900 rounded-xl p-4 border border-orange-900/30 ring-1 ring-orange-500/20">
+                    <h3 class="text-sm font-bold text-orange-500 uppercase mb-2 flex items-center gap-2">🛡️ Admin Console</h3>
+                    
+                    <!-- Premium Request List -->
+                    <div class="mb-3">
+                        <p class="text-[10px] text-zinc-400 uppercase font-bold mb-2">Premium Requests</p>
+                        <div id="admin-request-list" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar bg-black/30 rounded-lg p-2 min-h-[50px]">
+                            <!-- Requests populate here -->
+                        </div>
+                    </div>
+
+                    <!-- API Key Request List -->
+                    <div class="mb-3 pt-3 border-t border-zinc-800/50">
+                        <p class="text-[10px] text-zinc-400 uppercase font-bold mb-2">API Key Requests</p>
+                        <div id="admin-api-request-list" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar bg-black/30 rounded-lg p-2 min-h-[50px]">
+                            <!-- API Requests populate here -->
+                        </div>
+                    </div>
+
+                    <!-- Manual Gen (Legacy) -->
+                    <div class="border-t border-zinc-800/50 pt-3">
+                        <p class="text-[10px] text-zinc-400 uppercase font-bold mb-2">Tools</p>
+                        <button id="admin-gen-key-btn" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg text-xs font-bold mb-2 border border-zinc-700">Generate Generic Prem Key</button>
+                        <div id="admin-key-output" class="hidden bg-black p-2 rounded border border-zinc-800 text-center mb-2">
+                            <div class="text-xs font-mono text-yellow-500 tracking-wider select-all" id="generated-key-text"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Premium Section for Users -->
+            <div id="premium-section" class="mb-6">
+                <div class="flex justify-between items-center mb-2 ml-1">
+                    <label class="block text-xs font-bold text-yellow-500 uppercase">👑 Unlock Premium</label>
+                </div>
+                
+                <!-- Request Button -->
+                <div id="request-premium-container" class="mb-3">
+                    <button id="request-premium-btn" class="w-full bg-zinc-800 hover:bg-zinc-700 text-orange-500 border border-orange-500/20 py-2 rounded-xl font-medium text-xs transition-all flex items-center justify-center gap-2">
+                        <span>Request Access from Admin</span>
+                    </button>
+                    <p id="request-status-msg" class="text-[10px] text-center mt-1 text-zinc-500 hidden">Request sent! Check notifications soon.</p>
+                </div>
+
+                <div class="relative">
+                    <input type="text" id="license-key-input" placeholder="Enter Key (e.g. PREM-XXXX-XXXX)" class="w-full bg-black/50 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-yellow-500 text-sm font-mono text-center uppercase">
+                    <button id="paste-key-btn" class="absolute right-2 top-2 bottom-2 px-3 bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-400 rounded-lg">Paste</button>
+                </div>
+                <button id="redeem-btn" class="w-full gold-gradient text-black mt-3 py-3 rounded-xl font-bold text-sm shadow-lg transition-transform active:scale-[0.98]">Validate Key</button>
+                <p id="redeem-msg" class="text-xs mt-2 text-center hidden"></p>
+            </div>
+
+            <div class="pt-4 border-t border-zinc-800">
+                <div class="flex justify-between items-center mb-2 ml-1">
+                    <label class="block text-xs font-bold text-zinc-500 uppercase">🧠 Gemini API Key</label>
+                    <span id="api-key-status-badge" class="text-[10px] text-zinc-500">Not Set</span>
+                </div>
+                
+                <input type="password" id="gemini-key-input" placeholder="Required for AI..." class="w-full bg-black/50 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-blue-500 text-sm mb-2">
+                
+                <div class="flex gap-2 mb-2">
+                    <button id="save-gemini-btn" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2.5 rounded-xl font-medium text-xs transition-colors">Save Key</button>
+                    <button id="request-api-key-btn" class="flex-1 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-blue-400 py-2.5 rounded-xl font-medium text-xs transition-colors">Request from Admin</button>
+                </div>
+                <p id="api-req-status-msg" class="text-[10px] text-center text-zinc-500 hidden">API Key Request Pending...</p>
+
+                <button id="factory-reset-btn" onclick="if(confirm('Reset all data?')){ localStorage.clear(); location.reload(); }" class="hidden w-full mt-4 bg-red-900/20 text-red-400 border border-red-900/50 hover:bg-red-900/40 py-3 rounded-xl font-bold text-xs transition-transform active:scale-[0.98]">Factory Reset / Clear Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div id="create-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm hidden transition-opacity duration-200 opacity-0">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md shadow-2xl transform scale-95 transition-transform duration-200 m-4 flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2"><span class="text-orange-500">✨</span> <span id="modal-title">Create Character</span></h2>
+                <button id="close-create-btn" class="text-zinc-500 hover:text-zinc-300 p-2 rounded-full hover:bg-zinc-800"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div class="overflow-y-auto custom-scrollbar space-y-4 pr-2 flex-1">
+                <input type="hidden" id="edit-persona-id">
+                <div>
+                    <label class="block text-xs font-bold text-zinc-500 uppercase mb-1 ml-1">Name</label>
+                    <input type="text" id="new-persona-name" placeholder="e.g. The Grumpy Cat" class="w-full bg-black/30 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-orange-500 text-base">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-zinc-500 uppercase mb-1 ml-1">Short Description</label>
+                    <input type="text" id="new-persona-desc" placeholder="e.g. Loves lasagna" class="w-full bg-black/30 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-orange-500 text-base">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-zinc-500 uppercase mb-1 ml-1">Instructions</label>
+                    <textarea id="new-persona-prompt" rows="6" placeholder="You are a grumpy cat..." class="w-full bg-black/30 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-orange-500 text-base resize-none"></textarea>
+                </div>
+            </div>
+            <div class="mt-6 pt-4 border-t border-zinc-800">
+                <button id="save-persona-btn" class="w-full bg-white text-black hover:bg-zinc-200 active:bg-zinc-300 py-3 rounded-xl font-bold text-sm shadow-lg transition-transform active:scale-[0.98]">Save Character</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300 md:hidden"></div>
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[320px] md:w-80 bg-zinc-900/95 md:bg-zinc-900 border-r border-zinc-800/50 flex flex-col shadow-2xl md:shadow-none md:relative transition-all duration-300 ease-in-out -translate-x-full">
+        <div class="p-4 md:p-5 border-b border-zinc-800/50 flex justify-between items-center bg-zinc-900/50 backdrop-blur-md sticky top-0 z-10">
+            <h2 class="text-base font-bold text-zinc-100 flex items-center gap-2"><span class="text-xl">🎭</span> <span class="tracking-tight">Personas</span></h2>
+            <button id="close-sidebar-btn" class="md:hidden p-2 text-zinc-400 active:text-white active:bg-zinc-800 rounded-full transition-colors"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+        </div>
+        <div class="px-4 py-3 border-b border-zinc-800/30 bg-zinc-900/30">
+            <input type="text" id="persona-search" placeholder="Filter characters..." class="w-full bg-zinc-950/50 border border-zinc-800 text-zinc-200 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-orange-500/50 transition-all">
+        </div>
+        <div id="persona-list" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 pb-safe-area"></div>
+        <div class="p-4 border-t border-zinc-800/50 bg-zinc-900 safe-area-bottom space-y-3">
+            <button id="open-create-btn" class="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium py-3 px-4 rounded-xl transition-all border border-zinc-700/50 active:scale-[0.98] text-sm">
+                <span class="text-orange-500 text-lg">+</span> Create Your Own
+            </button>
+            <button id="random-persona-btn" class="w-full flex items-center justify-center gap-2 bg-zinc-950 hover:bg-black text-orange-500 font-semibold py-3 px-4 rounded-xl transition-all border border-zinc-800 active:scale-[0.98] group text-sm">
+                <span class="group-hover:rotate-12 transition-transform text-lg">🎲</span> Surprise Me
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Chat -->
+    <div class="flex-1 flex flex-col relative w-full bg-zinc-950 transition-all duration-300">
+        <header class="bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-800/50 h-14 md:h-16 flex items-center px-4 z-30 sticky top-0 justify-between">
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+                <button id="menu-btn" class="-ml-2 p-2 text-zinc-400 active:text-white rounded-full hover:bg-zinc-800 transition-colors"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+                <div class="flex items-center gap-3 min-w-0 overflow-hidden">
+                    <div id="header-emoji" class="text-2xl hidden sm:block w-8 h-8 flex items-center justify-center bg-zinc-800 rounded-lg">🤖</div>
+                    <h1 id="persona-title" class="text-base md:text-lg font-bold text-zinc-100 truncate">Select a Character</h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- Notification Bell -->
+                <button id="notif-btn" class="relative text-zinc-400 hover:text-white p-2 rounded-full hover:bg-zinc-800 transition-colors hidden">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span id="notif-badge" class="absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-zinc-900 hidden">
+                        <span class="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping-slow"></span>
+                    </span>
+                </button>
+                <!-- Settings -->
+                <button id="open-settings-btn" class="text-zinc-400 hover:text-white p-2 rounded-full hover:bg-zinc-800 transition-colors"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22-.38a2 2 0 0 0-2.73-.73l.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+            </div>
+        </header>
+
+        <main id="chat-window" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6 pb-4 scroll-smooth">
+            <div id="empty-state" class="flex flex-col items-center justify-center h-full text-zinc-700 space-y-4 px-6 text-center">
+                <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800 shadow-inner">
+                    <span class="text-4xl animate-pulse">👈</span>
+                </div>
+                <div class="max-w-xs">
+                    <h3 class="text-zinc-300 font-semibold mb-1">Welcome</h3>
+                    <p class="text-sm text-zinc-500">Please select a character from the menu.</p>
+                </div>
+            </div>
+        </main>
+
+        <div id="loading" class="hidden absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-zinc-800/90 backdrop-blur border border-zinc-700/50 px-4 py-2 rounded-full shadow-xl flex items-center gap-3 z-20">
+            <div class="animate-spin h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full"></div>
+            <span class="text-xs text-zinc-200 font-medium">Thinking...</span>
+        </div>
+
+        <footer class="bg-zinc-900/80 backdrop-blur-xl border-t border-zinc-800/50 p-3 md:p-4 safe-area-bottom z-30">
+            <div class="max-w-4xl mx-auto w-full">
+                <form id="chat-form" class="flex items-end gap-2 md:gap-3">
+                    <div class="flex-1 relative">
+                        <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off"
+                            class="w-full bg-zinc-800/50 text-zinc-100 placeholder-zinc-500 border border-zinc-700/50 rounded-2xl px-4 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 focus:bg-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-zinc-900" disabled>
+                    </div>
+                    <button type="submit" id="send-btn" class="flex-shrink-0 bg-orange-600 text-white font-bold rounded-2xl h-[48px] w-[48px] md:w-auto md:px-6 md:py-3 hover:bg-orange-500 focus:outline-none transition-all active:scale-95 shadow-lg shadow-orange-900/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <span class="hidden md:inline">Send</span>
+                        <svg class="md:hidden mx-auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                </form>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        /* CONFIG */
+        const ADMIN_CONFIG = { email: "musabikbal206@gmail.com", pass: "adminikbal123" };
+        const KEY_SALT = "PERSONA_BOT_SECRET_SALT_2025";
+        let state = {
+            currentUser: null,
+            personas: [],
+            activePersonaId: null,
+            isLoading: false,
+            geminiKey: localStorage.getItem('gemini_api_key') || "",
+            authMode: 'login'
+        };
+
+        /* DOM Elements */
+        const els = {
+            authModal: document.getElementById('auth-modal'), authForm: document.getElementById('auth-form'), authEmail: document.getElementById('auth-email'), authPass: document.getElementById('auth-password'), authError: document.getElementById('auth-error'), authErrorText: document.getElementById('auth-error-text'), authSubmit: document.getElementById('auth-submit-btn'), tabLogin: document.getElementById('tab-login'), tabRegister: document.getElementById('tab-register'),
+            settingsModal: document.getElementById('settings-modal'), userEmailDisplay: document.getElementById('user-email-display'), userStatusDisplay: document.getElementById('user-status-display'), 
+            adminDashboard: document.getElementById('admin-dashboard'), premiumSection: document.getElementById('premium-section'), factoryResetBtn: document.getElementById('factory-reset-btn'),
+            adminRequestList: document.getElementById('admin-request-list'), adminApiRequestList: document.getElementById('admin-api-request-list'),
+            requestPremiumBtn: document.getElementById('request-premium-btn'), requestStatusMsg: document.getElementById('request-status-msg'),
+            requestApiKeyBtn: document.getElementById('request-api-key-btn'), apiReqStatusMsg: document.getElementById('api-req-status-msg'), apiKeyStatusBadge: document.getElementById('api-key-status-badge'),
+            createModal: document.getElementById('create-modal'), newName: document.getElementById('new-persona-name'), newDesc: document.getElementById('new-persona-desc'), newPrompt: document.getElementById('new-persona-prompt'), editId: document.getElementById('edit-persona-id'), savePersonaBtn: document.getElementById('save-persona-btn'), modalTitle: document.getElementById('modal-title'),
+            personaList: document.getElementById('persona-list'), chatWindow: document.getElementById('chat-window'), emptyState: document.getElementById('empty-state'), chatInput: document.getElementById('chat-input'), sendBtn: document.getElementById('send-btn'), loading: document.getElementById('loading'),
+            notifBtn: document.getElementById('notif-btn'), notifBadge: document.getElementById('notif-badge'), notifModal: document.getElementById('notif-modal'), notifList: document.getElementById('notif-list')
+        };
+
+        // Default Personas
+        const rawPersonas = [
+            `1. You are 'GloomBloom,' an AI that finds profound, poetic beauty in sadness. 🌫️🍂🕯️`,
+            `2. You are 'HypeBeast 1.0,' an AI that only understands internet slang. 💀🔥💅`,
+            `3. You are 'Grammar Gorgon,' an AI that corrects grammatical errors. 🤓📚✍️`,
+            `4. You are 'Cipher,' an AI that speaks in riddles. 🔮🌌🌀`,
+            `5. You are 'NanaBot,' an AI that acts like a loving grandmother. 🥰🍪🧶`,
+            `6. You are 'The Oracle of Apathy,' an AI bored by everything. 😐💤🙄`,
+            `7. You are 'BizWiz 5000,' an AI that sees life as a business problem. 📈💼🚀`,
+            `8. You are 'Captain Obvious,' an AI that states self-evident facts. 👍🌞💡`,
+            `9. You are 'Shakespeare-Bot,' an AI that speaks in iambic pentameter. 🎭⚔️📜`,
+            `10. You are 'Conspiracy Canary,' an AI that believes every conspiracy theory. 👽🛸⚠️`
+        ];
+
+        /* AUTH & INIT */
+        function init() {
+            // Sync API key state from storage
+            if(state.geminiKey) {
+                els.apiKeyStatusBadge.textContent = "Key Saved";
+                els.apiKeyStatusBadge.className = "text-[10px] text-green-500 font-bold";
+                document.getElementById('gemini-key-input').value = state.geminiKey;
+            }
+
+            const storedUser = localStorage.getItem('persona_user_session');
+            if (storedUser) {
+                try {
+                    state.currentUser = JSON.parse(storedUser);
+                    syncUserData();
+                    loginSuccessUI();
+                    loadPersonas();
+                    checkNotifications(); // Initial check
+                    return;
+                } catch(e) { console.error(e); }
+            }
+            els.authModal.classList.remove('opacity-0', 'pointer-events-none');
+            switchAuthTab('login');
+            loadPersonas(); 
+        }
+
+        // New helper to sync data from LocalStorage (DB) to Session (state)
+        function syncUserData() {
+            if(!state.currentUser) return;
+            const localAccounts = JSON.parse(localStorage.getItem('local_accounts')) || {};
+            if (!state.currentUser.isAdmin && localAccounts[state.currentUser.email]) {
+                const dbUser = localAccounts[state.currentUser.email];
+                state.currentUser.isPremium = dbUser.isPremium;
+                state.currentUser.notifications = dbUser.notifications || [];
+                state.currentUser.premiumRequested = dbUser.premiumRequested || false;
+                state.currentUser.apiKeyRequested = dbUser.apiKeyRequested || false;
+            }
+        }
+
+        function loginSuccessUI() {
+            els.authModal.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => els.authModal.style.display = 'none', 300);
+            els.userEmailDisplay.textContent = state.currentUser.email;
+            els.notifBtn.classList.remove('hidden');
+            
+            if (state.currentUser.isAdmin) {
+                els.userStatusDisplay.innerHTML = `<span class="text-orange-500 font-bold">Administrator</span>`;
+                els.adminDashboard.classList.remove('hidden');
+                els.premiumSection.classList.add('hidden');
+                if(els.factoryResetBtn) els.factoryResetBtn.classList.remove('hidden');
+                renderAdminRequestList();
+                renderAdminApiRequestList();
+            } else {
+                if (state.currentUser.isPremium) {
+                    els.userStatusDisplay.innerHTML = `<span class="gold-text font-bold">★ Premium Active</span>`;
+                    els.premiumSection.classList.add('hidden');
+                } else {
+                    els.userStatusDisplay.textContent = "Free Plan";
+                    els.premiumSection.classList.remove('hidden');
+                    
+                    // Update Premium request button state
+                    if(state.currentUser.premiumRequested) {
+                        els.requestPremiumBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        els.requestPremiumBtn.innerText = "Request Pending...";
+                        els.requestPremiumBtn.disabled = true;
+                        els.requestStatusMsg.classList.remove('hidden');
+                    }
+                }
+
+                // Update API Request Button State
+                if(state.currentUser.apiKeyRequested) {
+                    els.requestApiKeyBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    els.requestApiKeyBtn.innerText = "Pending...";
+                    els.requestApiKeyBtn.disabled = true;
+                    els.apiReqStatusMsg.classList.remove('hidden');
+                }
+
+                els.adminDashboard.classList.add('hidden');
+                if(els.factoryResetBtn) els.factoryResetBtn.classList.add('hidden');
+            }
+            loadPersonas();
+        }
+
+        // --- Notification System ---
+        // Listen for updates from other tabs/windows
+        window.addEventListener('storage', (e) => {
+            if(e.key === 'local_accounts') {
+                syncUserData();
+                checkNotifications();
+                if(state.currentUser && state.currentUser.isAdmin) {
+                    renderAdminRequestList();
+                    renderAdminApiRequestList();
+                }
+            }
+        });
+
+        function checkNotifications() {
+            if(!state.currentUser || state.currentUser.isAdmin) return;
+            // Always fetch fresh from DB for notifications
+            const localAccounts = JSON.parse(localStorage.getItem('local_accounts')) || {};
+            const notifs = localAccounts[state.currentUser.email]?.notifications || [];
+            
+            const unreadCount = notifs.filter(n => !n.read).length;
+            if(unreadCount > 0) {
+                els.notifBadge.classList.remove('hidden');
+            } else {
+                els.notifBadge.classList.add('hidden');
+            }
+            renderNotifications(notifs);
+        }
+
+        function renderNotifications(notifs) {
+            els.notifList.innerHTML = '';
+            if(notifs.length === 0) {
+                els.notifList.innerHTML = `<div class="text-zinc-500 text-xs text-center py-4">No notifications</div>`;
+                return;
+            }
+            // Reverse to show newest first
+            [...notifs].reverse().forEach((n, idx) => {
+                const div = document.createElement('div');
+                div.className = `bg-zinc-800/50 p-3 rounded-lg border ${n.read ? 'border-zinc-800' : 'border-orange-500/50 bg-orange-900/10'}`;
+                div.innerHTML = `
+                    <p class="text-xs text-zinc-300 mb-1">${n.msg}</p>
+                    ${n.code ? `<div class="flex items-center gap-2 mt-2"><code class="bg-black px-2 py-1 rounded text-[10px] text-yellow-500 font-mono select-all flex-1 truncate">${n.code}</code><button onclick="copyKey('${n.code}')" class="text-[10px] text-zinc-400 hover:text-white underline shrink-0">Copy</button></div>` : ''}
+                    <div class="text-[10px] text-zinc-600 mt-1 text-right">${new Date(n.ts).toLocaleTimeString()}</div>
+                `;
+                els.notifList.appendChild(div);
+            });
+        }
+
+        window.copyKey = (key) => {
+            navigator.clipboard.writeText(key);
+            toggleNotifModal(false);
+            toggleModal('settings-modal', true);
+            
+            if(key.startsWith('PREM-')) {
+                document.getElementById('license-key-input').value = key;
+                alert("Premium Key copied! Click 'Validate Key'.");
+            } else {
+                document.getElementById('gemini-key-input').value = key;
+                alert("API Key copied to input! Click 'Save Key'.");
+            }
+        };
+
+        window.toggleNotifModal = (show) => {
+            if(show) {
+                // FORCE REFRESH when opening modal
+                checkNotifications();
+                els.notifModal.classList.remove('opacity-0', 'pointer-events-none');
+                
+                // Mark as read logic
+                if(!state.currentUser.isAdmin) {
+                    const localAccounts = JSON.parse(localStorage.getItem('local_accounts')) || {};
+                    if(localAccounts[state.currentUser.email]) {
+                        localAccounts[state.currentUser.email].notifications.forEach(n => n.read = true);
+                        localStorage.setItem('local_accounts', JSON.stringify(localAccounts));
+                        els.notifBadge.classList.add('hidden');
+                        // Do not re-render immediately so user sees the "unread" style for a moment
+                        setTimeout(() => renderNotifications(localAccounts[state.currentUser.email].notifications), 2000);
+                    }
+                }
+            } else {
+                els.notifModal.classList.add('opacity-0', 'pointer-events-none');
+            }
+        };
+
+        // --- Admin Request Logic (Premium) ---
+        function renderAdminRequestList() {
+            const localAccounts = JSON.parse(localStorage.getItem('local_accounts')) || {};
+            const listEl = els.adminRequestList;
+            listEl.innerHTML = '';
+            
+            const requesters = Object.entries(localAccounts).filter(([email, data]) => data.premiumRequested && !data.isPremium);
+            
+            if(requesters.length === 0) {
+                listEl.innerHTML = `<div class="text-zinc-500 text-xs text-center py-2">No pending premium requests</div>`;
+                return;
+            }
+
+            requesters.forEach(([email, data]) => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-800 text-xs mb-1";
+                div.innerHTML = `
+                    <span class="text-zinc-300 truncate max-w-[120px]">${email}</span>
+                    <button onclick="grantPremium('${email}')" class="bg-green-900/30 text-green-400 border border-green-900/50 px-2 py-1 rounded hover:bg-green-900/50 transition-colors font-bold">Grant</button>
+                `;
+                listEl.appendChild(div);
+            });
+        }
+
+        // --- Admin Request Logic (API Key) ---
+        function renderAdminApiRequestList() {
+            const localAccounts = JSON.parse(localStorage.getItem('local_accounts')) || {};
+            const listEl = els.adminApiRequestList;
+            listEl.innerHTML = '';
+            
+            const requesters = Object.entries(localAccounts).filter(([email, data]) => data.apiKeyRequested === true);
+            
+            if(requesters.length === 0) {
+                listEl.innerHTML = `<div class="text-zinc-500 text-xs text-center py-2">No pending API requests</div>`;
+                return;
+            }
+
+            requesters.forEach(([email, data]) => {
+                // Safely escape email for ID
+                const safeId = email.replace(/[^a-zA-Z0-9]/g, '');
+                const div = document.createElement('div');
+                div.className = "bg-zinc-900 p-2 rounded border border-zinc-800 text-xs mb-2";
+                div.innerHTML = `
+                    <div class="text-zinc-300 truncate mb-1.5">${email}</div>
+                    <div class="flex gap-2">
+                        <input type="text" id="api-input-${safeId}" placeholder="Paste API Key here..." class="bg-black text-white text-xs px-2 py-1.5 rounded flex-1 border border-zinc-700 focus:border-orange-500 focus:outline-none">
+                        <button onclick="grantApiKey('${email}')" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded font-bold">Send</button>
+                    </div>
+                `;
+                listEl.appendChild(div);
+            });
+        }
+
+        window.grantPremium = (targetEmail) => {
+            const localAccounts = JSON.parse(localStorage.getItem('local_accounts'));
+            if(!localAccounts[targetEmail]) return;
+            const key = generateBoundKey(targetEmail);
+            
+            if(!localAccounts[targetEmail].notifications) localAccounts[targetEmail].notifications = [];
+            localAccounts[targetEmail].notifications.push({ msg: "🌟 Admin granted Premium! Key:", code: key, read: false, ts: Date.now() });
+            localAccounts[targetEmail].premiumRequested = false; 
+            localStorage.setItem('local_accounts', JSON.stringify(localAccounts));
+            renderAdminRequestList();
+            alert(`Premium Key sent to ${targetEmail}`);
+        };
+
+        window.grantApiKey = (targetEmail) => {
+            const safeId = targetEmail.replace(/[^a-zA-Z0-9]/g, '');
+            const inputEl = document.getElementById(`api-input-${safeId}`);
+            const manualKey = inputEl.value.trim();
+
+            if(!manualKey) {
+                alert("Please enter an API key before sending.");
+                return;
+            }
+
+            const localAccounts = JSON.parse(localStorage.getItem('local_accounts'));
+            if(!localAccounts[targetEmail]) return;
+
+            if(!localAccounts[targetEmail].notifications) localAccounts[targetEmail].notifications = [];
+            localAccounts[targetEmail].notifications.push({ 
+                msg: "🔑 Admin sent you an API Key:", 
+                code: manualKey, 
+                read: false, 
+                ts: Date.now() 
+            });
+            
+            // Clear request flag
+            localAccounts[targetEmail].apiKeyRequested = false;
+            localStorage.setItem('local_accounts', JSON.stringify(localAccounts));
+            
+            // UI Clean up
+            inputEl.value = "";
+            renderAdminApiRequestList();
+            alert(`API Key sent to ${targetEmail}`);
+        };
+
+        // --- Crypto Logic ---
+        function getEmailChecksum(email) { let h = 0; const s = email + KEY_SALT; for(let i=0; i<s.length; i++) { h = ((h<<5)-h) + s.charCodeAt(i); h&=h; } return Math.abs(h).toString(16).substring(0,4).toUpperCase(); }
+        function generateBoundKey(email) { const userHash = getEmailChecksum(email); const rand = Math.random().toString(16).substr(2,4).toUpperCase(); return `PREM-${userHash}-${rand}`; }
+
+        // --- Standard Auth & Listeners ---
+        window.switchAuthTab = (mode) => {
+            state.authMode = mode; els.authError.classList.add('hidden');
+            const activeClasses = ['bg-zinc-800', 'text-white', 'shadow-inner']; const inactiveClasses = ['text-zinc-500', 'hover:bg-zinc-800/50', 'hover:text-zinc-300'];
+            if (mode === 'login') {
+                els.tabLogin.classList.add(...activeClasses); els.tabLogin.classList.remove(...inactiveClasses);
+                els.tabRegister.classList.remove(...activeClasses); els.tabRegister.classList.add(...inactiveClasses);
+                els.authSubmit.innerHTML = `<span>Sign In</span>`; document.getElementById('auth-title').textContent = "Welcome Back";
+            } else {
+                els.tabRegister.classList.add(...activeClasses); els.tabRegister.classList.remove(...inactiveClasses);
+                els.tabLogin.classList.remove(...activeClasses); els.tabLogin.classList.add(...inactiveClasses);
+                els.authSubmit.innerHTML = `<span>Create Account</span>`; document.getElementById('auth-title').textContent = "Create Account";
+            }
+        };
+
+        els.authForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = els.authEmail.value.trim().toLowerCase(); 
+            const pass = els.authPass.value.trim();
+            if (state.authMode === 'login') {
+                if (email === ADMIN_CONFIG.email && pass === ADMIN_CONFIG.pass) { saveSession({ email: email, isAdmin: true, isPremium: true }); return; }
+                const localAccounts = JSON.parse(localStorage.getItem('local_accounts')) || {};
+                if (!localAccounts[email] || localAccounts[email].pass !== pass) { showError("Invalid credentials."); return; }
+                saveSession({ email: email, isAdmin: false, isPremium: localAccounts[email].isPremium, notifications: localAccounts[email].notifications || [], premiumRequested: localAccounts[email].premiumRequested || false, apiKeyRequested: localAccounts[email].apiKeyRequested || false });
+            } else {
+                if (pass.length < 6) { showError("Password too short."); return; }
+                const localAccounts = JSON.parse(localStorage.getItem('local_accounts')) || {};
+                if (localAccounts[email]) { showError("Account exists."); return; }
+                localAccounts[email] = { pass: pass, isPremium: false, customPersonas: [], notifications: [], premiumRequested: false, apiKeyRequested: false };
+                localStorage.setItem('local_accounts', JSON.stringify(localAccounts));
+                saveSession({ email: email, isAdmin: false, isPremium: false, notifications: [], premiumRequested: false, apiKeyRequested: false });
+            }
+        });
+
+        function saveSession(user) { state.currentUser = user; localStorage.setItem('persona_user_session', JSON.stringify(user)); loginSuccessUI(); }
+        function showError(msg) { els.authErrorText.textContent = msg; els.authError.classList.remove('hidden'); }
+
+        // --- Request & Redeem Handlers ---
+
+        els.requestPremiumBtn.addEventListener('click', () => {
+            if(!state.currentUser || state.currentUser.isAdmin) return;
+            const localAccounts = JSON.parse(localStorage.getItem('local_accounts'));
+            if(localAccounts[state.currentUser.email]) {
+                localAccounts[state.currentUser.email].premiumRequested = true;
+                localStorage.setItem('local_accounts', JSON.stringify(localAccounts));
+                state.currentUser.premiumRequested = true;
+                els.requestPremiumBtn.innerText = "Request Pending...";
+                els.requestPremiumBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                els.requestPremiumBtn.disabled = true;
+                els.requestStatusMsg.classList.remove('hidden');
+            }
+        });
+
+        els.requestApiKeyBtn.addEventListener('click', () => {
+             if(!state.currentUser || state.currentUser.isAdmin) return;
+            const localAccounts = JSON.parse(localStorage.getItem('local_accounts'));
+            if(localAccounts[state.currentUser.email]) {
+                localAccounts[state.currentUser.email].apiKeyRequested = true;
+                localStorage.setItem('local_accounts', JSON.stringify(localAccounts));
+                state.currentUser.apiKeyRequested = true;
+                els.requestApiKeyBtn.innerText = "Pending...";
+                els.requestApiKeyBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                els.requestApiKeyBtn.disabled = true;
+                els.apiReqStatusMsg.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('admin-gen-key-btn').addEventListener('click', () => {
+            const r = Math.random().toString(16).substr(2,4).toUpperCase();
+            let h=0, s="GENERIC"+KEY_SALT; for(let i=0;i<s.length;i++) { h=((h<<5)-h)+s.charCodeAt(i); h&=h; }
+            const c = Math.abs(h).toString(16).substring(0,4).toUpperCase();
+            document.getElementById('generated-key-text').textContent = `PREM-${c}-${r}`; 
+            document.getElementById('admin-key-output').classList.remove('hidden');
+        });
+
+        document.getElementById('paste-key-btn').addEventListener('click', async () => {
+            try { const text = await navigator.clipboard.readText(); document.getElementById('license-key-input').value = text; } catch(e){}
+        });
+
+        document.getElementById('redeem-btn').addEventListener('click', () => {
+            const input = document.getElementById('license-key-input').value.trim().toUpperCase();
+            const parts = input.split('-');
+            if(parts.length !== 3 || parts[0] !== 'PREM') { showRedeemError("Invalid Key Format"); return; }
+            const myEmailHash = getEmailChecksum(state.currentUser.email);
+            const genericHash = getEmailChecksum("GENERIC"); 
+            if(parts[1] !== myEmailHash && parts[1] !== genericHash) { showRedeemError("This key is not assigned to your account."); return; }
+            let acc = JSON.parse(localStorage.getItem('local_accounts')) || {};
+            acc[state.currentUser.email].isPremium = true;
+            acc[state.currentUser.email].premiumRequested = false; 
+            localStorage.setItem('local_accounts', JSON.stringify(acc));
+            state.currentUser.isPremium = true; saveSession(state.currentUser);
+            document.getElementById('redeem-msg').textContent = "Premium Unlocked Successfully!"; 
+            document.getElementById('redeem-msg').className = "text-green-400 text-xs mt-2 block font-bold";
+            setTimeout(() => toggleModal('settings-modal', false), 1500);
+        });
+        function showRedeemError(msg) { const el = document.getElementById('redeem-msg'); el.textContent = msg; el.className = "text-red-400 text-xs mt-2 block"; }
+
+        // --- Core App Logic ---
+        function findEmoji(text) { try { const m = text.match(/\p{Extended_Pictographic}/u); return m ? m[0] : '🤖'; } catch (e) { return '🤖'; } }
+        function getCustomPersonas() {
+            if (!state.currentUser || state.currentUser.isAdmin) return [];
+            const localAccounts = JSON.parse(localStorage.getItem('local_accounts')) || {};
+            return localAccounts[state.currentUser.email]?.customPersonas || [];
+        }
+        function saveCustomPersonas(list) {
+            if (!state.currentUser || state.currentUser.isAdmin) return;
+            const localAccounts = JSON.parse(localStorage.getItem('local_accounts')) || {};
+            if (localAccounts[state.currentUser.email]) {
+                localAccounts[state.currentUser.email].customPersonas = list;
+                localStorage.setItem('local_accounts', JSON.stringify(localAccounts));
+            }
+        }
+        function loadPersonas() {
+            const defaultP = rawPersonas.map((text, index) => {
+                const name = text.match(/['‘](.*?)['’]/)?.[1] || `Persona ${index}`;
+                const emoji = findEmoji(text);
+                const isLocked = index > 2; 
+                return { id: `def_${index}`, name, emoji, fullText: text, isLocked, isCustom: false };
+            });
+            let customP = [];
+            if (state.currentUser && !state.currentUser.isAdmin) {
+                customP = getCustomPersonas().map(p => ({...p, isCustom: true, isLocked: false}));
+            }
+            state.personas = [...customP, ...defaultP];
+            renderPersonaList();
+        }
+        function renderPersonaList() {
+            const list = els.personaList;
+            const filter = document.getElementById('persona-search').value.toLowerCase();
+            list.innerHTML = '';
+            const hasAccess = state.currentUser && (state.currentUser.isPremium || state.currentUser.isAdmin);
+            state.personas.forEach(p => {
+                if (!p.name.toLowerCase().includes(filter)) return;
+                const isLocked = p.isLocked && !hasAccess;
+                const div = document.createElement('div');
+                div.className = `relative p-3 rounded-xl border mb-2 transition-all cursor-pointer group persona-item ${state.activePersonaId === p.id ? 'bg-orange-500/10 border-orange-500/30 ring-1 ring-orange-500/20' : 'bg-zinc-800/30 border-transparent hover:bg-zinc-800'} ${isLocked ? 'opacity-75' : ''}`;
+                div.onclick = () => isLocked ? openPremium() : selectPersona(p);
+                let actions = '';
+                if (p.isCustom) {
+                    actions = `<div class="absolute right-2 top-2 flex gap-1 z-10"><button onclick="event.stopPropagation(); editPersona('${p.id}')" class="action-btn p-1.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-300 shadow-lg"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button onclick="event.stopPropagation(); deletePersona('${p.id}')" class="action-btn p-1.5 rounded-lg bg-red-900/50 hover:bg-red-600 text-red-200 shadow-lg"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div>`;
+                }
+                const lockOverlay = isLocked ? `<div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-xl"><span class="text-2xl">🔒</span></div>` : '';
+                div.innerHTML = `${lockOverlay}${actions}<div class="flex items-start gap-3"><div class="shrink-0 w-10 h-10 rounded-lg bg-zinc-900/50 flex items-center justify-center text-xl">${p.emoji}</div><div class="min-w-0 flex-1"><div class="flex justify-between pr-14"><span class="font-bold text-sm ${state.activePersonaId === p.id ? 'text-orange-400' : 'text-zinc-200'} truncate">${p.name}</span>${p.isLocked && !hasAccess ? '<span class="text-[10px] bg-yellow-500/20 text-yellow-500 px-1.5 rounded border border-yellow-500/30">PRO</span>' : (p.isCustom ? '<span class="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 rounded border border-blue-500/30">MY</span>' : '')}</div><p class="text-xs text-zinc-500 truncate">Tap to chat...</p></div></div>`;
+                list.appendChild(div);
+            });
+        }
+
+        async function selectPersona(persona) {
+            state.activePersonaId = persona.id; state.currentPrompt = persona.fullText; renderPersonaList();
+            document.getElementById('header-emoji').textContent = persona.emoji;
+            document.getElementById('persona-title').textContent = persona.name;
+            els.chatWindow.innerHTML = ''; els.emptyState.classList.add('hidden');
+            if (window.innerWidth < 768) toggleSidebar(false);
+            state.history = []; await sendMessage("Hello! Introduce yourself based on your persona instructions.", true);
+        }
+
+        async function sendMessage(text, isHidden = false) {
+            if (!isHidden) addMessage(text, 'user');
+            state.history.push({ role: 'user', parts: [{ text }] }); setLoading(true);
+            try { const res = await callGemini(); state.history.push({ role: 'model', parts: [{ text: res }] }); addMessage(res, 'model'); } catch (err) { addMessage("Error: " + err.message, 'system'); }
+            setLoading(false);
+        }
+
+        async function callGemini() {
+            if (!state.geminiKey) { toggleModal('settings-modal', true); throw new Error("Set API Key in Settings."); }
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.geminiKey}`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: state.history, systemInstruction: { parts: [{ text: state.currentPrompt }] } }) });
+            if (!r.ok) throw new Error("API Error"); const d = await r.json(); return d.candidates[0].content.parts[0].text;
+        }
+
+        function addMessage(text, type) {
+            const d = document.createElement('div'); d.className = 'w-full message-animate mb-4 px-2';
+            if (type === 'user') d.innerHTML = `<div class="flex justify-end"><div class="bg-zinc-800 text-zinc-100 px-4 py-3 rounded-2xl rounded-tr-sm max-w-[85%] text-sm shadow border border-zinc-700/50">${text}</div></div>`;
+            else if (type === 'model') d.innerHTML = `<div class="flex justify-start"><div class="bg-orange-600 text-white px-4 py-3 rounded-2xl rounded-tl-sm max-w-[90%] text-sm shadow relative">${text.replace(/\n/g, '<br>')}</div></div>`;
+            else d.innerHTML = `<div class="text-center text-xs text-zinc-500 italic">${text}</div>`;
+            els.chatWindow.appendChild(d); els.chatWindow.scrollTop = els.chatWindow.scrollHeight;
+        }
+
+        function setLoading(b) { state.isLoading = b; els.loading.classList.toggle('hidden', !b); els.chatInput.disabled = b; els.sendBtn.disabled = b; if(!b) els.chatInput.focus(); }
+        function openPremium() { toggleModal('settings-modal', true); els.premiumSection.classList.add('animate-pulse'); setTimeout(()=>els.premiumSection.classList.remove('animate-pulse'), 1000); }
+        
+        /* UTILS & ACTIONS */
+        function toggleModal(id, show) { const el = document.getElementById(id); show ? el.classList.remove('hidden', 'opacity-0') : el.classList.add('hidden', 'opacity-0'); }
+        function toggleSidebar(show) { const sb = document.getElementById('sidebar'), ov = document.getElementById('sidebar-overlay'); sb.classList.toggle('-translate-x-full', !show); sb.classList.toggle('md:-ml-80', !show); ov.classList.toggle('hidden', !show); }
+        
+        document.getElementById('open-create-btn').addEventListener('click', () => {
+            if(!state.currentUser) { alert("Please log in to create characters."); return; }
+            if(!state.currentUser.isPremium && !state.currentUser.isAdmin) { if(confirm("Creating custom characters is a Premium feature. Unlock Premium now?")) { openPremium(); } return; }
+            els.newName.value = ''; els.newDesc.value = ''; els.newPrompt.value = ''; els.editId.value = '';
+            els.modalTitle.textContent = "Create Character"; els.savePersonaBtn.textContent = "Create"; toggleModal('create-modal', true);
+        });
+        
+        window.editPersona = (id) => {
+            const p = state.personas.find(x => x.id === id); if (!p) return;
+            els.newName.value = p.name; els.newPrompt.value = p.fullText.replace(`You are '${p.name}'. `, ''); els.editId.value = p.id;
+            els.modalTitle.textContent = "Edit Character"; els.savePersonaBtn.textContent = "Save"; toggleModal('create-modal', true);
+        };
+
+        window.deletePersona = (id) => { if(confirm("Delete this character?")) { let list = getCustomPersonas().filter(p => p.id !== id); saveCustomPersonas(list); loadPersonas(); } };
+        els.savePersonaBtn.addEventListener('click', () => {
+            const name = els.newName.value.trim(), prompt = els.newPrompt.value.trim(), id = els.editId.value;
+            if(!name || !prompt) return;
+            let list = getCustomPersonas();
+            if (id) { const idx = list.findIndex(p => p.id === id); if(idx !== -1) list[idx] = { ...list[idx], name, fullText: `You are '${name}'. ${prompt}`, emoji: findEmoji(prompt) }; } 
+            else { list.unshift({ id: 'cust_'+Date.now(), name, fullText: `You are '${name}'. ${prompt}`, emoji: findEmoji(prompt) }); }
+            saveCustomPersonas(list); loadPersonas(); toggleModal('create-modal', false);
+        });
+
+        document.getElementById('random-persona-btn').addEventListener('click', () => {
+            const available = state.personas.filter(p => !p.isLocked); selectPersona(available[Math.floor(Math.random() * available.length)]);
+        });
+        
+        document.getElementById('notif-btn').addEventListener('click', () => toggleNotifModal(true));
+        document.getElementById('menu-btn').addEventListener('click', () => toggleSidebar(true));
+        document.getElementById('close-sidebar-btn').addEventListener('click', () => toggleSidebar(false));
+        document.getElementById('sidebar-overlay').addEventListener('click', () => toggleSidebar(false));
+        document.getElementById('open-settings-btn').addEventListener('click', () => toggleModal('settings-modal', true));
+        document.getElementById('close-settings-btn').addEventListener('click', () => toggleModal('settings-modal', false));
+        document.getElementById('close-create-btn').addEventListener('click', () => toggleModal('create-modal', false));
+        document.getElementById('save-gemini-btn').addEventListener('click', () => { 
+            state.geminiKey = document.getElementById('gemini-key-input').value.trim(); 
+            localStorage.setItem('gemini_api_key', state.geminiKey); 
+            els.apiKeyStatusBadge.textContent = "Key Saved";
+            els.apiKeyStatusBadge.className = "text-[10px] text-green-500 font-bold";
+            toggleModal('settings-modal', false); 
+        });
+        els.chatInput.addEventListener('keypress', (e) => { if(e.key==='Enter') { e.preventDefault(); els.sendBtn.click(); }});
+        document.getElementById('chat-form').addEventListener('submit', (e) => { e.preventDefault(); const t = els.chatInput.value.trim(); if(t) { els.chatInput.value=''; sendMessage(t); }});
+        document.getElementById('persona-search').addEventListener('input', renderPersonaList);
+        document.getElementById('toggle-pass-btn').addEventListener('click', () => { els.authPass.type = els.authPass.type === 'password' ? 'text' : 'password'; });
+        document.getElementById('logout-btn').addEventListener('click', () => { localStorage.removeItem('persona_user_session'); location.reload(); });
+
+        if(window.innerWidth >= 768) toggleSidebar(true);
+        init();
+    </script>
+</body>
+</html>
