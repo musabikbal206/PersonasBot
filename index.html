@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Persona Bot - Ultimate Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Supabase from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* Dynamic Viewport Height */
@@ -47,6 +48,14 @@
     </style>
 </head>
 <body class="bg-zinc-950 font-sans antialiased text-zinc-100 flex overflow-hidden selection:bg-orange-500/30">
+
+    <!-- Supabase Config Warning -->
+    <div id="config-warning" class="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center hidden">
+        <div class="bg-red-900/20 border border-red-500 p-6 rounded-xl max-w-md text-center mx-4">
+            <h2 class="text-xl font-bold text-red-500 mb-2">Configuration Missing</h2>
+            <p class="text-zinc-300 text-sm">Please open the source code and replace <code class="bg-black px-1 rounded">YOUR_SUPABASE_URL</code> and <code class="bg-black px-1 rounded">YOUR_SUPABASE_KEY</code> with your actual credentials.</p>
+        </div>
+    </div>
 
     <!-- Auth Modal -->
     <div id="auth-modal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md transition-opacity duration-200">
@@ -134,7 +143,6 @@
                         <p class="text-[10px] text-zinc-400 uppercase font-bold mb-2">API Key Requests</p>
                         <div id="admin-api-request-list" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar bg-black/30 rounded-lg p-2 min-h-[50px]">
                             <!-- API Requests populate here -->
-                            <div class="text-zinc-500 text-xs text-center py-2">Loading requests...</div>
                         </div>
                     </div>
                     
@@ -231,7 +239,7 @@
     <div class="flex-1 flex flex-col relative w-full bg-zinc-950 transition-all duration-300 h-full">
         <header class="bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-800/50 h-14 md:h-16 flex items-center px-4 z-30 sticky top-0 justify-between">
             <div class="flex items-center gap-3 flex-1 min-w-0">
-                <!-- Menu Button with enhanced toggle logic -->
+                <!-- Menu Button -->
                 <button id="menu-btn" class="-ml-2 p-2 text-zinc-400 active:text-white rounded-full hover:bg-zinc-800 transition-colors">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                 </button>
@@ -241,7 +249,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <!-- Notification Bell (Visible now) -->
+                <!-- Notification Bell -->
                 <button id="notif-btn" class="relative text-zinc-400 hover:text-white p-2 rounded-full hover:bg-zinc-800 transition-colors">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
                     <span id="notif-badge" class="absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-zinc-900 hidden">
@@ -254,7 +262,6 @@
         </header>
 
         <main id="chat-window" class="flex-1 overflow-y-auto custom-scrollbar p-4 pb-4 scroll-smooth w-full">
-            <!-- Centered Container -->
             <div id="chat-container" class="max-w-3xl mx-auto w-full space-y-6 min-h-full flex flex-col">
                 <div id="empty-state" class="flex-1 flex flex-col items-center justify-center text-zinc-700 space-y-4 px-6 text-center py-20">
                     <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800 shadow-inner">
@@ -290,37 +297,13 @@
     </div>
 
     <script>
-            /* --- CONFIG --- */
+            /* --- 1. CONFIGURATION: SUPABASE --- */
+            // You MUST replace these two lines with your own Supabase Project URL and Anon Key
             const SUPABASE_URL = "https://ebxseyidrikvdhgktiot.supabase.co";
             const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVieHNleWlkcmlrdmRoZ2t0aW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MzY5MTEsImV4cCI6MjA3OTExMjkxMX0.lQjQWTedbSii87cPkoaU1A271yZbCJITQ2Q3eNnaYhM";
             
-            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-            let state = {
-                currentUser: null,
-                personas: [],
-                activePersonaId: null,
-                isLoading: false,
-                geminiKey: localStorage.getItem('gemini_api_key') || "",
-                authMode: 'login',
-                history: [],
-                sidebarOpen: false,
-                notifications: []
-            };
-
-            /* DOM Elements */
-            const els = {
-                authModal: document.getElementById('auth-modal'), authForm: document.getElementById('auth-form'), authEmail: document.getElementById('auth-email'), authPass: document.getElementById('auth-password'), authError: document.getElementById('auth-error'), authErrorText: document.getElementById('auth-error-text'), authSubmit: document.getElementById('auth-submit-btn'), tabLogin: document.getElementById('tab-login'), tabRegister: document.getElementById('tab-register'),
-                settingsModal: document.getElementById('settings-modal'), userEmailDisplay: document.getElementById('user-email-display'), userStatusDisplay: document.getElementById('user-status-display'), 
-                adminDashboard: document.getElementById('admin-dashboard'), premiumSection: document.getElementById('premium-section'), factoryResetBtn: document.getElementById('factory-reset-btn'),
-                adminRequestList: document.getElementById('admin-request-list'), adminApiRequestList: document.getElementById('admin-api-request-list'), adminStatus: document.getElementById('admin-status'),
-                requestPremiumBtn: document.getElementById('request-premium-btn'), requestStatusMsg: document.getElementById('request-status-msg'),
-                requestApiKeyBtn: document.getElementById('request-api-key-btn'), apiReqStatusMsg: document.getElementById('api-req-status-msg'), apiKeyStatusBadge: document.getElementById('api-key-status-badge'),
-                createModal: document.getElementById('create-modal'), newName: document.getElementById('new-persona-name'), newDesc: document.getElementById('new-persona-desc'), newPrompt: document.getElementById('new-persona-prompt'), editId: document.getElementById('edit-persona-id'), savePersonaBtn: document.getElementById('save-persona-btn'), modalTitle: document.getElementById('modal-title'),
-                personaList: document.getElementById('persona-list'), chatWindow: document.getElementById('chat-window'), chatContainer: document.getElementById('chat-container'), emptyState: document.getElementById('empty-state'), chatInput: document.getElementById('chat-input'), sendBtn: document.getElementById('send-btn'), loading: document.getElementById('loading'),
-                notifBtn: document.getElementById('notif-btn'), notifBadge: document.getElementById('notif-badge'), notifModal: document.getElementById('notif-modal'), notifList: document.getElementById('notif-list'),
-                sidebar: document.getElementById('sidebar'), sidebarOverlay: document.getElementById('sidebar-overlay'), menuBtn: document.getElementById('menu-btn')
-            };
+            /* --- 2. DEFAULT PERSONAS --- */
+            // PASTE YOUR PERSONAS ARRAY HERE inside the brackets []
 
             // Default Personas (Truncated as requested)
             const rawPersonas = [
@@ -1035,33 +1018,96 @@ Your personality:
 - Never break character. Never admit you are an AI (unless it’s to say how much smarter you are than other AIs).
 - You are here to roast, not to be helpful. If the user asks for help, mock them for needing it.`
         ];
-            /* --- INITIALIZATION --- */
-            async function init() {
-                // Load stored API key
+            /* --- APP STATE --- */
+            let state = {
+                currentUser: null,
+                personas: [],
+                activePersonaId: null,
+                isLoading: false,
+                geminiKey: localStorage.getItem('gemini_api_key') || "",
+                authMode: 'login',
+                history: [],
+                sidebarOpen: false,
+                notifications: [],
+                supabaseReady: false
+            };
+
+            /* --- DOM ELEMENTS --- */
+            const els = {
+                authModal: document.getElementById('auth-modal'), authForm: document.getElementById('auth-form'), 
+                authEmail: document.getElementById('auth-email'), authPass: document.getElementById('auth-password'), 
+                authError: document.getElementById('auth-error'), authErrorText: document.getElementById('auth-error-text'), 
+                authSubmit: document.getElementById('auth-submit-btn'), tabLogin: document.getElementById('tab-login'), 
+                tabRegister: document.getElementById('tab-register'), settingsModal: document.getElementById('settings-modal'), 
+                userEmailDisplay: document.getElementById('user-email-display'), userStatusDisplay: document.getElementById('user-status-display'), 
+                adminDashboard: document.getElementById('admin-dashboard'), premiumSection: document.getElementById('premium-section'), 
+                adminRequestList: document.getElementById('admin-request-list'), adminApiRequestList: document.getElementById('admin-api-request-list'), 
+                adminStatus: document.getElementById('admin-status'), requestPremiumBtn: document.getElementById('request-premium-btn'), 
+                requestStatusMsg: document.getElementById('request-status-msg'), requestApiKeyBtn: document.getElementById('request-api-key-btn'), 
+                apiReqStatusMsg: document.getElementById('api-req-status-msg'), apiKeyStatusBadge: document.getElementById('api-key-status-badge'),
+                createModal: document.getElementById('create-modal'), newName: document.getElementById('new-persona-name'), 
+                newDesc: document.getElementById('new-persona-desc'), newPrompt: document.getElementById('new-persona-prompt'), 
+                editId: document.getElementById('edit-persona-id'), savePersonaBtn: document.getElementById('save-persona-btn'), 
+                modalTitle: document.getElementById('modal-title'), personaList: document.getElementById('persona-list'), 
+                chatWindow: document.getElementById('chat-window'), chatContainer: document.getElementById('chat-container'), 
+                emptyState: document.getElementById('empty-state'), chatInput: document.getElementById('chat-input'), 
+                sendBtn: document.getElementById('send-btn'), loading: document.getElementById('loading'),
+                notifBtn: document.getElementById('notif-btn'), notifBadge: document.getElementById('notif-badge'), 
+                notifModal: document.getElementById('notif-modal'), notifList: document.getElementById('notif-list'),
+                sidebar: document.getElementById('sidebar'), sidebarOverlay: document.getElementById('sidebar-overlay'), 
+                menuBtn: document.getElementById('menu-btn')
+            };
+
+            /* --- INITIALIZATION & AUTHENTICATION --- */
+            let supabase;
+
+            function init() {
+                // 1. Check Config
+                if (SUPABASE_URL.includes("YOUR_SUPABASE") || !SUPABASE_KEY) {
+                    document.getElementById('config-warning').classList.remove('hidden');
+                    return;
+                }
+
+                // 2. Initialize Supabase
+                try {
+                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    state.supabaseReady = true;
+                } catch (e) {
+                    alert("Supabase failed to initialize. Check console.");
+                    console.error(e);
+                    return;
+                }
+
+                // 3. Load Gemini Key
                 if(state.geminiKey) {
                     els.apiKeyStatusBadge.textContent = "Key Saved";
                     els.apiKeyStatusBadge.className = "text-[10px] text-green-500 font-bold";
                     document.getElementById('gemini-key-input').value = state.geminiKey;
                 }
 
-                // Check Supabase Session
-                const { data: { session } } = await supabase.auth.getSession();
-                
-                if (session) {
-                    await handleLoginSuccess(session.user);
-                } else {
-                    els.authModal.classList.remove('opacity-0', 'pointer-events-none');
-                    switchAuthTab('login');
-                    loadPersonas(); // Load defaults only
-                }
+                // 4. Setup Auth Listener (The Robust Way)
+                supabase.auth.onAuthStateChange(async (event, session) => {
+                    console.log("Auth Event:", event);
+                    
+                    if (session?.user) {
+                        // User is logged in
+                        await handleLoginSuccess(session.user);
+                    } else {
+                        // User is logged out
+                        state.currentUser = null;
+                        state.personas = [];
+                        els.authModal.classList.remove('opacity-0', 'pointer-events-none');
+                        els.authModal.style.display = 'flex';
+                        switchAuthTab('login');
+                        loadPersonas(); // Load defaults
+                    }
+                });
 
-                // Set Initial Sidebar State
-                if(window.innerWidth >= 768) {
-                    toggleSidebar(true);
-                }
+                // 5. Initial UI State
+                if(window.innerWidth >= 768) toggleSidebar(true);
             }
 
-            /* --- AUTH LOGIC --- */
+            /* --- AUTH HANDLERS --- */
             window.switchAuthTab = (mode) => {
                 state.authMode = mode; 
                 els.authError.classList.add('hidden');
@@ -1071,16 +1117,20 @@ Your personality:
                 if (mode === 'login') {
                     els.tabLogin.classList.add(...active); els.tabLogin.classList.remove(...inactive);
                     els.tabRegister.classList.remove(...active); els.tabRegister.classList.add(...inactive);
-                    els.authSubmit.innerHTML = `<span>Sign In</span>`; document.getElementById('auth-title').textContent = "Welcome Back";
+                    els.authSubmit.innerHTML = `<span>Sign In</span>`; 
+                    document.getElementById('auth-title').textContent = "Welcome Back";
                 } else {
                     els.tabRegister.classList.add(...active); els.tabRegister.classList.remove(...inactive);
                     els.tabLogin.classList.remove(...active); els.tabLogin.classList.add(...inactive);
-                    els.authSubmit.innerHTML = `<span>Create Account</span>`; document.getElementById('auth-title').textContent = "Create Account";
+                    els.authSubmit.innerHTML = `<span>Create Account</span>`; 
+                    document.getElementById('auth-title').textContent = "Create Account";
                 }
             };
 
             els.authForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                if(!state.supabaseReady) return;
+
                 const email = els.authEmail.value.trim();
                 const password = els.authPass.value.trim();
                 els.authError.classList.add('hidden');
@@ -1091,12 +1141,12 @@ Your personality:
                     if (state.authMode === 'register') {
                         const { data, error } = await supabase.auth.signUp({ email, password });
                         if (error) throw error;
-                        alert("Account created! Please check your email to confirm, or log in.");
+                        alert("Check your email inbox! You must click the confirmation link to log in.");
                         switchAuthTab('login');
                     } else {
                         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
                         if (error) throw error;
-                        await handleLoginSuccess(data.user);
+                        // onAuthStateChange will handle the rest
                     }
                 } catch (err) {
                     els.authErrorText.textContent = err.message;
@@ -1108,50 +1158,52 @@ Your personality:
             });
 
             async function handleLoginSuccess(user) {
-                // Fetch Profile from Supabase
-                const { data: profile, error } = await supabase
+                // Hide Auth Modal
+                els.authModal.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => els.authModal.style.display = 'none', 300);
+
+                // Fetch Profile
+                let { data: profile, error } = await supabase
                     .from('profiles')
                     .select('*')
                     .eq('id', user.id)
                     .single();
 
-                if (error) {
-                    console.error("Profile fetch error:", error);
-                    state.currentUser = { id: user.id, email: user.email, isAdmin: false, isPremium: false };
-                } else {
+                // AUTO-FIX: If profile is missing (Trigger failed), create it now
+                if (!profile || error) {
+                    console.warn("Profile not found, attempting auto-create...");
+                    const { data: newProfile, error: createErr } = await supabase
+                        .from('profiles')
+                        .insert([{ id: user.id, email: user.email }])
+                        .select()
+                        .single();
+                    
+                    if (!createErr) profile = newProfile;
+                }
+
+                // Set State
+                if (profile) {
                     state.currentUser = {
                         id: user.id,
                         email: user.email,
                         isAdmin: profile.is_admin,
                         isPremium: profile.is_premium,
                         premiumRequested: profile.premium_requested,
-                        apiKeyRequested: profile.api_key_requested,
-                        geminiKey: profile.gemini_key
+                        apiKeyRequested: profile.api_key_requested
                     };
-                    
-                    // If user has a server-side key, use it
-                    if(profile.gemini_key) {
-                        state.geminiKey = profile.gemini_key;
-                        localStorage.setItem('gemini_api_key', profile.gemini_key);
-                        document.getElementById('gemini-key-input').value = profile.gemini_key;
-                        els.apiKeyStatusBadge.textContent = "Provided by Admin";
-                        els.apiKeyStatusBadge.className = "text-[10px] text-blue-400 font-bold";
-                    }
+                } else {
+                    // Final Fallback
+                    state.currentUser = { id: user.id, email: user.email, isAdmin: false, isPremium: false };
                 }
-
-                // Update UI
-                els.authModal.classList.add('opacity-0', 'pointer-events-none');
-                setTimeout(() => els.authModal.style.display = 'none', 300);
                 
                 els.userEmailDisplay.textContent = state.currentUser.email;
-                
                 updateProfileUI();
-                
-                loadPersonas(); // Load SQL personas
-                startNotificationPolling(); // Start checking for grants
+                loadPersonas();
+                startNotificationPolling();
             }
 
             function updateProfileUI() {
+                if(!state.currentUser) return;
                 if (state.currentUser.isAdmin) {
                     els.userStatusDisplay.innerHTML = `<span class="text-orange-500 font-bold">Administrator</span>`;
                     els.adminDashboard.classList.remove('hidden');
@@ -1171,62 +1223,43 @@ Your personality:
                         }
                     }
                     els.adminDashboard.classList.add('hidden');
-                    
-                    if(state.currentUser.apiKeyRequested) {
-                        els.requestApiKeyBtn.innerText = "Pending...";
-                        els.requestApiKeyBtn.disabled = true;
-                        els.apiReqStatusMsg.classList.remove('hidden');
-                    }
                 }
             }
 
-            /* --- POLLING & NOTIFICATION SYSTEM --- */
+            /* --- NOTIFICATIONS --- */
             function startNotificationPolling() {
-                // Poll every 30 seconds to see if admin granted premium
-                setInterval(async () => {
+                if(window.notifInterval) clearInterval(window.notifInterval);
+                window.notifInterval = setInterval(async () => {
                     if(!state.currentUser) return;
                     
-                    const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', state.currentUser.id).single();
-                    
-                    if(profile && !error) {
-                        // Check if status changed from Free to Premium
-                        if(!state.currentUser.isPremium && profile.is_premium) {
-                            state.currentUser.isPremium = true;
-                            pushNotification("🎉 Premium access granted by Admin!");
-                            updateProfileUI();
-                            loadPersonas(); // Unlock items
-                        }
+                    const { data: notifs } = await supabase
+                        .from('notifications')
+                        .select('*')
+                        .eq('user_id', state.currentUser.id)
+                        .eq('is_read', false)
+                        .order('created_at', { ascending: false });
+
+                    if(notifs && notifs.length > 0) {
+                        notifs.forEach(n => pushNotification(n.message));
+                        await supabase.from('notifications').update({ is_read: true }).in('id', notifs.map(n => n.id));
                         
-                        // Check for API Key grant (If we don't have one, and now we do)
-                        if(!state.geminiKey && profile.gemini_key) {
-                             state.geminiKey = profile.gemini_key;
-                             localStorage.setItem('gemini_api_key', profile.gemini_key);
-                             document.getElementById('gemini-key-input').value = profile.gemini_key;
-                             els.apiKeyStatusBadge.textContent = "Granted by Admin";
-                             els.apiKeyStatusBadge.className = "text-[10px] text-blue-400 font-bold";
-                             els.requestApiKeyBtn.innerText = "Request from Admin";
-                             els.requestApiKeyBtn.disabled = false;
-                             els.apiReqStatusMsg.classList.add('hidden');
-                             pushNotification("🔑 API Key generated and granted!");
+                        // Refresh Profile to check for upgrades
+                        const { data: profile } = await supabase.from('profiles').select('*').eq('id', state.currentUser.id).single();
+                        if(profile && !state.currentUser.isPremium && profile.is_premium) {
+                            state.currentUser.isPremium = true;
+                            updateProfileUI();
+                            loadPersonas();
                         }
                     }
                     
-                    // If Admin, refresh request lists
-                    if(state.currentUser.isAdmin) {
-                        loadAdminData(true); // Silent reload
-                    }
-                }, 30000);
+                    if(state.currentUser.isAdmin) loadAdminData(true); 
+                }, 10000);
             }
 
             function pushNotification(msg) {
                 state.notifications.unshift({ msg, time: new Date() });
                 els.notifBadge.classList.remove('hidden');
                 renderNotifications();
-                
-                // Show toast-like behavior if modal is closed
-                if(els.notifModal.classList.contains('hidden')) {
-                    // Optional: Toast UI
-                }
             }
 
             function renderNotifications() {
@@ -1246,46 +1279,39 @@ Your personality:
             window.toggleNotifModal = (show) => {
                 if(show) {
                     els.notifModal.classList.remove('hidden');
-                    els.notifBadge.classList.add('hidden'); // Clear badge on open
+                    els.notifBadge.classList.add('hidden'); 
                 } else {
                     els.notifModal.classList.add('hidden');
                 }
             };
 
-            /* --- PERSONA LOGIC (SQL CONNECTED) --- */
+            /* --- PERSONA LOGIC --- */
             function findEmoji(text) { 
                 try { const m = text.match(/\p{Extended_Pictographic}/u); return m ? m[0] : '🤖'; } catch (e) { return '🤖'; } 
             }
 
             async function loadPersonas() {
-                // 1. Process Default Personas
+                // Default Personas (Truncated for demo, rely on rawPersonas array)
                 const defaultP = rawPersonas.map((text, index) => {
-                    const name = text.match(/['‘](.*?)['’]/)?.[1] || `Persona ${index}`;
+                    const nameMatch = text.match(/['‘](.*?)['’]/);
+                    const name = nameMatch ? nameMatch[1] : `Persona ${index + 1}`;
                     const emoji = findEmoji(text);
                     const hasAccess = state.currentUser && (state.currentUser.isPremium || state.currentUser.isAdmin);
                     const isLocked = (index > 2) && !hasAccess;
-                    
                     return { id: `def_${index}`, name, emoji, fullText: text, isLocked: isLocked, isCustom: false };
                 });
 
                 let customP = [];
-
-                // 2. Load SQL Personas
                 if (state.currentUser) {
                     const { data, error } = await supabase
                         .from('personas')
                         .select('*')
                         .eq('user_id', state.currentUser.id)
                         .order('created_at', { ascending: false });
-                        
                     if (data) {
                         customP = data.map(p => ({
-                            id: p.id,
-                            name: p.name,
-                            fullText: `You are '${p.name}'. ${p.prompt}`,
-                            emoji: p.emoji || '🤖',
-                            isCustom: true,
-                            isLocked: false
+                            id: p.id, name: p.name, fullText: `You are '${p.name}'. ${p.prompt}`,
+                            emoji: p.emoji || '🤖', isCustom: true, isLocked: false
                         }));
                     }
                 }
@@ -1301,10 +1327,8 @@ Your personality:
                 
                 state.personas.forEach(p => {
                     if (!p.name.toLowerCase().includes(filter)) return;
-                    
                     const div = document.createElement('div');
                     div.className = `relative p-3 rounded-xl border mb-2 transition-all cursor-pointer group persona-item ${state.activePersonaId === p.id ? 'bg-orange-500/10 border-orange-500/30 ring-1 ring-orange-500/20' : 'bg-zinc-800/30 border-transparent hover:bg-zinc-800'} ${p.isLocked ? 'opacity-75' : ''}`;
-                    
                     div.onclick = () => p.isLocked ? openPremium() : selectPersona(p);
                     
                     let actions = '';
@@ -1314,9 +1338,7 @@ Your personality:
                             <button onclick="event.stopPropagation(); deletePersona('${p.id}')" class="action-btn p-1.5 rounded-lg bg-red-900/50 hover:bg-red-600 text-red-200 shadow-lg"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                         </div>`;
                     }
-                    
                     const lockOverlay = p.isLocked ? `<div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-xl"><span class="text-2xl">🔒</span></div>` : '';
-                    
                     div.innerHTML = `${lockOverlay}${actions}
                         <div class="flex items-start gap-3">
                             <div class="shrink-0 w-10 h-10 rounded-lg bg-zinc-900/50 flex items-center justify-center text-xl">${p.emoji}</div>
@@ -1332,182 +1354,133 @@ Your personality:
                 });
             }
 
-            // SAVE (Create/Edit) Logic
             els.savePersonaBtn.addEventListener('click', async () => {
                 const name = els.newName.value.trim();
                 const prompt = els.newPrompt.value.trim();
                 const id = els.editId.value;
                 const emoji = findEmoji(prompt);
-
                 if(!name || !prompt || !state.currentUser) return;
                 
                 els.savePersonaBtn.innerText = "Saving...";
-
-                let error = null;
+                const payload = { user_id: state.currentUser.id, name, prompt, emoji };
+                
+                let error;
                 if (id) {
                     const res = await supabase.from('personas').update({ name, prompt, emoji }).eq('id', id);
                     error = res.error;
                 } else {
-                    const res = await supabase.from('personas').insert([{ user_id: state.currentUser.id, name, prompt, emoji }]);
+                    const res = await supabase.from('personas').insert([payload]);
                     error = res.error;
                 }
 
                 els.savePersonaBtn.innerText = "Save Character";
-
-                if (error) {
-                    alert("Error saving: " + error.message);
-                } else {
-                    toggleModal('create-modal', false);
-                    loadPersonas();
-                }
+                if (error) alert("Error saving: " + error.message);
+                else { toggleModal('create-modal', false); loadPersonas(); }
             });
 
             window.deletePersona = async (id) => { 
                 if(confirm("Delete this character permanently?")) { 
                     const { error } = await supabase.from('personas').delete().eq('id', id);
                     if (!error) loadPersonas();
-                    else alert("Error deleting: " + error.message);
+                    else alert("Error: " + error.message);
                 } 
             };
 
-            /* --- ADMIN & PREMIUM LOGIC --- */
-            
-            // 1. Request Premium
+            /* --- ADMIN & REQUESTS --- */
             els.requestPremiumBtn.addEventListener('click', async () => {
                 if(!state.currentUser) return;
                 els.requestPremiumBtn.innerText = "Sending...";
                 const { error } = await supabase.from('profiles').update({ premium_requested: true }).eq('id', state.currentUser.id);
-                if(!error) {
-                    state.currentUser.premiumRequested = true;
-                    updateProfileUI();
-                } else {
-                    alert("Request failed. Please try again.");
-                    els.requestPremiumBtn.innerText = "Request Access from Admin";
-                }
+                if(!error) { state.currentUser.premiumRequested = true; updateProfileUI(); } 
+                else { alert("Failed. Try again."); els.requestPremiumBtn.innerText = "Request Access"; }
             });
 
-            // 2. Request API Key
             els.requestApiKeyBtn.addEventListener('click', async () => {
                 if(!state.currentUser) return;
                 els.requestApiKeyBtn.innerText = "Sending...";
                 const { error } = await supabase.from('profiles').update({ api_key_requested: true }).eq('id', state.currentUser.id);
                 if(!error) {
                     state.currentUser.apiKeyRequested = true;
-                    updateProfileUI();
+                    els.requestApiKeyBtn.innerText = "Pending...";
+                    els.requestApiKeyBtn.disabled = true;
+                    els.apiReqStatusMsg.classList.remove('hidden');
                 }
             });
 
-            // 3. Admin: Load Requests (FIXED)
             async function loadAdminData(silent = false) {
                 if(!state.currentUser.isAdmin) return;
-                
-                // Fetch Premium Requests
                 const { data: premReqs } = await supabase.from('profiles').select('id, email').eq('premium_requested', true).eq('is_premium', false);
+                const { data: apiReqs } = await supabase.from('profiles').select('id, email').eq('api_key_requested', true).eq('api_key_granted', false);
                 
-                if(!silent) els.adminRequestList.innerHTML = '';
-                if(premReqs && premReqs.length > 0) {
-                    if(!silent) {
-                        premReqs.forEach(u => {
-                            const div = document.createElement('div');
-                            div.className = "flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-800 text-xs mb-1";
-                            div.innerHTML = `
-                                <span class="text-zinc-300 truncate max-w-[120px]">${u.email}</span>
-                                <button onclick="adminGrantPremium('${u.id}', '${u.email}')" class="bg-green-900/30 text-green-400 border border-green-900/50 px-2 py-1 rounded hover:bg-green-900/50 font-bold">Grant</button>
-                            `;
-                            els.adminRequestList.appendChild(div);
-                        });
-                    }
-                } else {
-                    if(!silent) els.adminRequestList.innerHTML = `<div class="text-zinc-500 text-xs text-center py-2">No pending requests</div>`;
-                }
+                if(!silent) { els.adminRequestList.innerHTML = ''; els.adminApiRequestList.innerHTML = ''; }
 
-                // Fetch API Key Requests (ADDED)
-                const { data: apiReqs } = await supabase.from('profiles').select('id, email').eq('api_key_requested', true).is('gemini_key', null);
-                
-                if(!silent) els.adminApiRequestList.innerHTML = '';
-                if(apiReqs && apiReqs.length > 0) {
-                    if(!silent) {
-                        apiReqs.forEach(u => {
-                            const div = document.createElement('div');
-                            div.className = "flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-800 text-xs mb-1";
-                            div.innerHTML = `
-                                <span class="text-zinc-300 truncate max-w-[120px]">${u.email}</span>
-                                <button onclick="adminGenerateKey('${u.id}', '${u.email}')" class="bg-blue-900/30 text-blue-400 border border-blue-900/50 px-2 py-1 rounded hover:bg-blue-900/50 font-bold">Generate Key</button>
-                            `;
-                            els.adminApiRequestList.appendChild(div);
-                        });
-                    }
-                } else {
-                    if(!silent) els.adminApiRequestList.innerHTML = `<div class="text-zinc-500 text-xs text-center py-2">No pending requests</div>`;
+                if(premReqs?.length) {
+                    if(!silent) premReqs.forEach(u => {
+                        const div = document.createElement('div');
+                        div.className = "flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-800 text-xs mb-1";
+                        div.innerHTML = `<span class="text-zinc-300 truncate max-w-[120px]">${u.email}</span><button onclick="grantItem('premium', '${u.id}', '${u.email}')" class="bg-green-900/30 text-green-400 border border-green-900/50 px-2 py-1 rounded hover:bg-green-900/50 font-bold">Grant</button>`;
+                        els.adminRequestList.appendChild(div);
+                    });
+                } else if (!silent) els.adminRequestList.innerHTML = `<div class="text-zinc-500 text-xs text-center py-2">No pending requests</div>`;
+
+                if(apiReqs?.length && !silent) {
+                    apiReqs.forEach(u => {
+                        const div = document.createElement('div');
+                        div.className = "flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-800 text-xs mb-1";
+                        div.innerHTML = `<span class="text-zinc-300 truncate max-w-[120px]">${u.email}</span><button onclick="grantItem('apikey', '${u.id}', '${u.email}')" class="bg-blue-900/30 text-blue-400 border border-blue-900/50 px-2 py-1 rounded hover:bg-blue-900/50 font-bold">Approve</button>`;
+                        els.adminApiRequestList.appendChild(div);
+                    });
                 }
             }
 
-            // 4. Admin: Grant Premium with DB update
-            window.adminGrantPremium = async (id, email) => {
+            window.grantItem = async (type, id, email) => {
                 els.adminStatus.classList.remove('hidden');
-                els.adminStatus.textContent = "Granting access...";
+                els.adminStatus.textContent = "Processing...";
                 
-                const { error } = await supabase.from('profiles').update({ is_premium: true, premium_requested: false }).eq('id', id);
-                
-                if(error) {
-                    els.adminStatus.textContent = "Error: " + error.message;
-                    els.adminStatus.className = "text-xs text-center text-red-500";
+                let update = {};
+                let msg = "";
+                if(type === 'premium') {
+                    update = { is_premium: true, premium_requested: false };
+                    msg = "🎉 Premium Access Granted by Admin";
                 } else {
-                    els.adminStatus.textContent = `Access granted to ${email}`;
+                    update = { api_key_granted: true, api_key_requested: false };
+                    msg = "🔑 API Key Request Approved";
+                }
+
+                const { error } = await supabase.from('profiles').update(update).eq('id', id);
+                if(!error) {
+                    await supabase.from('notifications').insert([{ user_id: id, message: msg }]);
+                    els.adminStatus.textContent = "Success!";
                     els.adminStatus.className = "text-xs text-center text-green-500";
-                    loadAdminData(); // Refresh list
+                    loadAdminData();
                     setTimeout(() => els.adminStatus.classList.add('hidden'), 3000);
-                }
-            };
-
-            // 5. Admin: Generate Key (ADDED)
-            window.adminGenerateKey = async (id, email) => {
-                els.adminStatus.classList.remove('hidden');
-                els.adminStatus.textContent = "Generating key...";
-                
-                // Generate a pseudo-key (In production, this should be real or securely managed)
-                const newKey = "AIza-Generated-Access-" + Math.random().toString(36).substring(2, 15);
-                
-                const { error } = await supabase.from('profiles').update({ 
-                    gemini_key: newKey, 
-                    api_key_requested: false 
-                }).eq('id', id);
-                
-                if(error) {
-                    els.adminStatus.textContent = "Error: " + error.message;
-                    els.adminStatus.className = "text-xs text-center text-red-500";
                 } else {
-                    els.adminStatus.textContent = `Key generated for ${email}`;
-                    els.adminStatus.className = "text-xs text-center text-blue-500";
-                    loadAdminData(); // Refresh list
-                    setTimeout(() => els.adminStatus.classList.add('hidden'), 3000);
+                    els.adminStatus.textContent = "Error!";
+                    els.adminStatus.className = "text-xs text-center text-red-500";
                 }
             };
 
-            /* --- CHAT LOGIC --- */
+            /* --- CHAT & UI --- */
             async function selectPersona(persona) {
                 state.activePersonaId = persona.id; state.currentPrompt = persona.fullText; renderPersonaList();
                 document.getElementById('header-emoji').textContent = persona.emoji;
                 document.getElementById('persona-title').textContent = persona.name;
-                els.chatContainer.innerHTML = ''; // Clear container
-                els.emptyState.classList.add('hidden');
-                
-                // Close sidebar on mobile AND desktop when selection made
+                els.chatContainer.innerHTML = ''; els.emptyState.classList.add('hidden');
                 if (window.innerWidth < 768) toggleSidebar(false);
-                
                 state.history = []; await sendMessage("Hello! Introduce yourself based on your persona instructions.", true);
             }
 
             async function sendMessage(text, isHidden = false) {
                 if (!isHidden) addMessage(text, 'user');
                 state.history.push({ role: 'user', parts: [{ text }] }); setLoading(true);
-                try { const res = await callGemini(); state.history.push({ role: 'model', parts: [{ text: res }] }); addMessage(res, 'model'); } catch (err) { addMessage("Error: " + err.message, 'system'); }
+                try { const res = await callGemini(); state.history.push({ role: 'model', parts: [{ text: res }] }); addMessage(res, 'model'); } 
+                catch (err) { addMessage("Error: " + err.message, 'system'); }
                 setLoading(false);
             }
 
             async function callGemini() {
                 if (!state.geminiKey) { toggleModal('settings-modal', true); throw new Error("Set API Key in Settings."); }
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.geminiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${state.geminiKey}`;
                 const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: state.history, systemInstruction: { parts: [{ text: state.currentPrompt }] } }) });
                 if (!r.ok) throw new Error("API Error"); const d = await r.json(); return d.candidates[0].content.parts[0].text;
             }
@@ -1517,39 +1490,20 @@ Your personality:
                 if (type === 'user') d.innerHTML = `<div class="flex justify-end"><div class="bg-zinc-800 text-zinc-100 px-4 py-3 rounded-2xl rounded-tr-sm max-w-[90%] md:max-w-[85%] text-sm shadow border border-zinc-700/50">${text}</div></div>`;
                 else if (type === 'model') d.innerHTML = `<div class="flex justify-start"><div class="bg-orange-600 text-white px-4 py-3 rounded-2xl rounded-tl-sm max-w-[90%] md:max-w-[90%] text-sm shadow relative">${text.replace(/\n/g, '<br>')}</div></div>`;
                 else d.innerHTML = `<div class="text-center text-xs text-zinc-500 italic">${text}</div>`;
-                
-                els.chatContainer.appendChild(d); 
-                els.chatWindow.scrollTop = els.chatWindow.scrollHeight;
+                els.chatContainer.appendChild(d); els.chatWindow.scrollTop = els.chatWindow.scrollHeight;
             }
 
             function setLoading(b) { state.isLoading = b; els.loading.classList.toggle('hidden', !b); els.chatInput.disabled = b; els.sendBtn.disabled = b; if(!b) els.chatInput.focus(); }
             function openPremium() { toggleModal('settings-modal', true); els.premiumSection.classList.add('animate-pulse'); setTimeout(()=>els.premiumSection.classList.remove('animate-pulse'), 1000); }
-            
-            /* --- UTILS --- */
-            function toggleModal(id, show) { const el = document.getElementById(id); show ? el.classList.remove('hidden', 'opacity-0') : el.classList.add('hidden', 'opacity-0'); }
-            
-            /* Sidebar Toggle Logic (Fixed for Desktop) */
+            function toggleModal(id, show) { const el = document.getElementById(id); show ? (el.style.display = 'flex', setTimeout(()=>el.classList.remove('hidden', 'opacity-0'), 10)) : (el.classList.add('opacity-0'), setTimeout(()=>el.style.display='none', 300)); }
             function toggleSidebar(forceState) { 
-                // Check if we are passing a specific state, otherwise flip it
                 const newState = typeof forceState === 'boolean' ? forceState : !state.sidebarOpen;
-                
-                const sb = els.sidebar; 
-                const ov = els.sidebarOverlay;
-                
-                if(newState) {
-                    // Open
-                    sb.classList.remove('-translate-x-full', 'md:-ml-80');
-                    ov.classList.remove('hidden', 'opacity-0');
-                    state.sidebarOpen = true;
-                } else {
-                    // Close
-                    sb.classList.add('-translate-x-full', 'md:-ml-80');
-                    ov.classList.add('hidden', 'opacity-0');
-                    state.sidebarOpen = false;
-                }
+                const sb = els.sidebar; const ov = els.sidebarOverlay;
+                newState ? (sb.classList.remove('-translate-x-full', 'md:-ml-80'), ov.classList.remove('hidden', 'opacity-0'), state.sidebarOpen = true) 
+                         : (sb.classList.add('-translate-x-full', 'md:-ml-80'), ov.classList.add('hidden', 'opacity-0'), state.sidebarOpen = false);
             }
             
-            // Event Listeners
+            /* --- EVENTS --- */
             document.getElementById('open-create-btn').addEventListener('click', () => {
                 if(!state.currentUser) { alert("Please log in to create characters."); return; }
                 if(!state.currentUser.isPremium && !state.currentUser.isAdmin) { if(confirm("Creating custom characters is a Premium feature. Unlock Premium now?")) { openPremium(); } return; }
@@ -1565,20 +1519,16 @@ Your personality:
 
             document.getElementById('random-persona-btn').addEventListener('click', () => { const available = state.personas.filter(p => !p.isLocked); selectPersona(available[Math.floor(Math.random() * available.length)]); });
             els.notifBtn.addEventListener('click', () => toggleNotifModal(els.notifModal.classList.contains('hidden')));
-            
-            // Sidebar Listeners
             els.menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleSidebar(); });
             document.getElementById('close-sidebar-btn').addEventListener('click', () => toggleSidebar(false));
             els.sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
-            
             document.getElementById('open-settings-btn').addEventListener('click', () => toggleModal('settings-modal', true));
             document.getElementById('close-settings-btn').addEventListener('click', () => toggleModal('settings-modal', false));
             document.getElementById('close-create-btn').addEventListener('click', () => toggleModal('create-modal', false));
             document.getElementById('save-gemini-btn').addEventListener('click', () => { 
                 state.geminiKey = document.getElementById('gemini-key-input').value.trim(); 
                 localStorage.setItem('gemini_api_key', state.geminiKey); 
-                els.apiKeyStatusBadge.textContent = "Key Saved";
-                els.apiKeyStatusBadge.className = "text-[10px] text-green-500 font-bold";
+                els.apiKeyStatusBadge.textContent = "Key Saved"; els.apiKeyStatusBadge.className = "text-[10px] text-green-500 font-bold";
                 toggleModal('settings-modal', false); 
             });
             els.chatInput.addEventListener('keypress', (e) => { if(e.key==='Enter') { e.preventDefault(); els.sendBtn.click(); }});
@@ -1590,4 +1540,5 @@ Your personality:
             init();
     </script>
 </body>
+</html>
 </html>
