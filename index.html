@@ -134,7 +134,6 @@
                         <p class="text-[10px] text-zinc-400 uppercase font-bold mb-2">API Key Requests</p>
                         <div id="admin-api-request-list" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar bg-black/30 rounded-lg p-2 min-h-[50px]">
                             <!-- API Requests populate here -->
-                             <div class="text-zinc-500 text-xs text-center py-2">Loading requests...</div>
                         </div>
                     </div>
                     
@@ -1380,13 +1379,8 @@ Your personality:
             async function loadAdminData(silent = false) {
                 if(!state.currentUser.isAdmin) return;
                 
-                // Load Premium Requests
                 const { data: premReqs } = await supabase.from('profiles').select('id, email').eq('premium_requested', true).eq('is_premium', false);
                 
-                // Load API Key Requests (Fixed Logic)
-                const { data: keyReqs } = await supabase.from('profiles').select('id, email').eq('api_key_requested', true).eq('api_key_granted', false);
-
-                // Render Premium List
                 if(!silent) els.adminRequestList.innerHTML = '';
                 if(premReqs && premReqs.length > 0) {
                     if(!silent) {
@@ -1403,24 +1397,6 @@ Your personality:
                 } else {
                     if(!silent) els.adminRequestList.innerHTML = `<div class="text-zinc-500 text-xs text-center py-2">No pending requests</div>`;
                 }
-
-                // Render API Key List
-                if(!silent) els.adminApiRequestList.innerHTML = '';
-                if(keyReqs && keyReqs.length > 0) {
-                    if(!silent) {
-                        keyReqs.forEach(u => {
-                            const div = document.createElement('div');
-                            div.className = "flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-800 text-xs mb-1";
-                            div.innerHTML = `
-                                <span class="text-zinc-300 truncate max-w-[120px]">${u.email}</span>
-                                <button onclick="adminGrantApiKey('${u.id}', '${u.email}')" class="bg-blue-900/30 text-blue-400 border border-blue-900/50 px-2 py-1 rounded hover:bg-blue-900/50 font-bold">Grant Key</button>
-                            `;
-                            els.adminApiRequestList.appendChild(div);
-                        });
-                    }
-                } else {
-                    if(!silent) els.adminApiRequestList.innerHTML = `<div class="text-zinc-500 text-xs text-center py-2">No pending requests</div>`;
-                }
             }
 
             // 4. Admin: Grant Premium with DB update
@@ -1435,26 +1411,6 @@ Your personality:
                     els.adminStatus.className = "text-xs text-center text-red-500";
                 } else {
                     els.adminStatus.textContent = `Access granted to ${email}`;
-                    els.adminStatus.className = "text-xs text-center text-green-500";
-                    loadAdminData(); // Refresh list
-                    setTimeout(() => els.adminStatus.classList.add('hidden'), 3000);
-                }
-            };
-
-            // 5. Admin: Grant API Key with DB update (New Logic)
-            window.adminGrantApiKey = async (id, email) => {
-                els.adminStatus.classList.remove('hidden');
-                els.adminStatus.textContent = "Granting key...";
-                
-                // In a real app, you might generate a real key here.
-                // For this logic, we set the flag to true so the user gets notified.
-                const { error } = await supabase.from('profiles').update({ api_key_granted: true, api_key_requested: false }).eq('id', id);
-                
-                if(error) {
-                    els.adminStatus.textContent = "Error: " + error.message;
-                    els.adminStatus.className = "text-xs text-center text-red-500";
-                } else {
-                    els.adminStatus.textContent = `Key granted to ${email}`;
                     els.adminStatus.className = "text-xs text-center text-green-500";
                     loadAdminData(); // Refresh list
                     setTimeout(() => els.adminStatus.classList.add('hidden'), 3000);
