@@ -3,142 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Persona Chatbot v3.5 (Mega Pack)</title>
-    
+    <title>Persona Chatbot v3.3</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        zinc: {
-                            850: '#1f1f22',
-                            950: '#09090b',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        body { height: 100vh; height: 100dvh; }
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
+        /* Dynamic Viewport Height for Mobile Browsers */
+        body {
+            height: 100vh; /* Fallback */
+            height: 100dvh;
+        }
+
+        /* Custom scrollbar for dark theme */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #3f3f46;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #52525b;
+        }
         
+        /* Animation for new messages */
         @keyframes slideUpFade {
             from { opacity: 0; transform: translateY(15px) scale(0.98); }
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
-        .message-animate { animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        input, textarea, select { font-size: 16px !important; }
-        * { -webkit-tap-highlight-color: transparent; }
+        .message-animate {
+            animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
 
-        /* Auth Specific Styles */
-        .auth-gradient {
-            background: linear-gradient(90deg, #ea580c 0%, #dc2626 100%);
+        /* Prevent iOS zoom on input focus */
+        input, textarea, select {
+            font-size: 16px !important; 
         }
-        .auth-tab.active {
-            border-bottom: 2px solid #f97316;
-            color: #f97316;
+
+        /* Mobile tap highlight removal */
+        * {
+            -webkit-tap-highlight-color: transparent;
         }
-        .auth-tab {
-            border-bottom: 2px solid #27272a;
-            color: #71717a;
+
+        /* Action buttons hover effect */
+        .action-btn {
+            opacity: 0;
+            transform: translateX(10px);
+            transition: all 0.2s ease;
         }
-        .auth-input-icon {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #71717a;
+        .persona-item:hover .action-btn {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        @media (hover: none) {
+            .action-btn {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
     </style>
 </head>
 <body class="bg-zinc-950 font-sans antialiased text-zinc-100 flex overflow-hidden selection:bg-orange-500/30">
 
-    <!-- ============================== -->
-    <!-- AUTH MODAL (The Gatekeeper)    -->
-    <!-- ============================== -->
-    <div id="auth-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black transition-opacity duration-500">
-        <div class="w-full max-w-[380px] bg-[#121214] rounded-3xl shadow-2xl border border-zinc-800 overflow-hidden mx-4 relative">
-            
-            <!-- Header Tabs -->
-            <div class="flex w-full">
-                <button onclick="switchAuthTab('signin')" id="tab-signin" class="flex-1 py-4 text-sm font-bold text-center transition-colors auth-tab active">
-                    Sign In
-                </button>
-                <button onclick="switchAuthTab('signup')" id="tab-signup" class="flex-1 py-4 text-sm font-bold text-center transition-colors auth-tab bg-[#18181b]">
-                    Create Account
-                </button>
-            </div>
-
-            <!-- Content Container -->
-            <div class="p-8 pt-10 text-center">
-                <!-- Icon -->
-                <div class="mb-6 relative inline-block">
-                    <div class="text-5xl">🔐</div>
-                    <div class="absolute -bottom-1 -right-1 text-2xl">🗝️</div>
-                </div>
-
-                <!-- Text -->
-                <h2 id="auth-title" class="text-2xl font-bold text-white mb-2 tracking-tight">Welcome Back</h2>
-                <p id="auth-subtitle" class="text-zinc-500 text-sm mb-8">Enter your credentials to access your personas.</p>
-
-                <!-- Form -->
-                <form id="auth-form" class="space-y-4 text-left">
-                    <!-- Email -->
-                    <div class="relative group">
-                        <div class="auth-input-icon group-focus-within:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                        </div>
-                        <input type="email" id="auth-email" required 
-                            class="block w-full pl-12 pr-4 py-3.5 bg-[#18181b] border border-zinc-800 rounded-xl text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 transition-all text-sm font-medium" 
-                            placeholder="Email Address">
-                    </div>
-
-                    <!-- Password -->
-                    <div class="relative group">
-                        <div class="auth-input-icon group-focus-within:text-orange-500 transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        </div>
-                        <input type="password" id="auth-password" required 
-                            class="block w-full pl-12 pr-12 py-3.5 bg-[#18181b] border border-zinc-800 rounded-xl text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 transition-all text-sm font-medium" 
-                            placeholder="Password">
-                        <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400">
-                            <svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        </button>
-                    </div>
-
-                    <button type="submit" class="w-full auth-gradient text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-900/20 hover:opacity-90 active:scale-[0.98] transition-all mt-6">
-                        <span id="auth-btn-text">Sign In</span>
-                    </button>
-                </form>
-
-                <p id="auth-error" class="text-red-500 text-xs mt-4 hidden font-medium"></p>
-            </div>
-        </div>
-    </div>
-
     <!-- Settings Modal -->
     <div id="settings-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm hidden transition-opacity duration-200 opacity-0">
-        <div class="bg-zinc-900 border border-zinc-800/50 rounded-2xl p-6 w-full max-w-md shadow-2xl m-4 relative">
+        <div class="bg-zinc-900 border border-zinc-800/50 rounded-2xl p-6 w-full max-w-xs md:max-w-md shadow-2xl transform scale-95 transition-transform duration-200 m-4">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-white flex items-center gap-2"><span class="text-orange-500">🔑</span> API Settings</h2>
-                <button onclick="toggleModal('settings-modal', false)" class="text-zinc-500 hover:text-white"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span class="text-orange-500">🔑</span> Special Key
+                </h2>
+                <button id="close-settings-btn" class="text-zinc-500 hover:text-zinc-300 p-2 rounded-full hover:bg-zinc-800">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
             </div>
-            <p class="text-zinc-400 text-xs mb-3">Stored securely in your cloud profile.</p>
-            <input type="password" id="api-key-input" placeholder="Paste Gemini API Key..." class="w-full bg-black/50 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:border-orange-500 outline-none mb-4">
-            <button id="save-key-btn" class="w-full bg-orange-600 text-white py-3 rounded-xl font-bold">Save to Cloud</button>
-            <button onclick="handleLogout()" class="w-full mt-4 border border-zinc-700 text-zinc-400 hover:text-white py-3 rounded-xl font-bold text-sm">Log Out</button>
+            <p class="text-zinc-400 text-xs mb-3 leading-relaxed">Your key is stored locally on your device.</p>
+            <input type="password" id="api-key-input" placeholder="Paste Your Special Key..." 
+                class="w-full bg-black/50 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 mb-4 text-base transition-all">
+            <button id="save-key-btn" class="w-full bg-orange-600 active:bg-orange-700 text-white py-3 rounded-xl font-semibold text-sm shadow-lg shadow-orange-900/20 transition-transform active:scale-[0.98]">
+                Save & Continue
+            </button>
+            
+            <!-- Factory Reset Button Added Here -->
+            <button onclick="if(confirm('Are you sure? This will remove your Special key and all custom personas.')){ localStorage.clear(); location.reload(); }" 
+                class="w-full bg-red-900/20 text-red-400 border border-red-900/50 hover:bg-red-900/40 mt-4 py-3 rounded-xl font-bold text-sm transition-transform active:scale-[0.98]">
+                 Clear The Cache and Data
+            </button>
+
+            <div class="mt-4 text-center">
+                <a href="https://wa.link/kd7o5v" target="_blank" class="text-xs text-zinc-500 hover:text-orange-400 underline decoration-zinc-700 hover:decoration-orange-400 underline-offset-2 transition-colors">Get a special key here</a>
+            </div>
         </div>
     </div>
 
-    <!-- Create Persona Modal -->
+    <!-- Create/Edit Persona Modal -->
     <div id="create-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm hidden transition-opacity duration-200 opacity-0">
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md shadow-2xl transform scale-95 transition-transform duration-200 m-4 flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center mb-4">
@@ -149,6 +108,7 @@
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
             </div>
+            
             <div class="overflow-y-auto custom-scrollbar space-y-4 pr-2 flex-1">
                 <input type="hidden" id="edit-persona-id">
                 <div>
@@ -168,26 +128,32 @@
                         class="w-full bg-black/30 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-base resize-none"></textarea>
                 </div>
             </div>
+
             <div class="mt-6 pt-4 border-t border-zinc-800">
                 <button id="save-persona-btn" class="w-full bg-white text-black hover:bg-zinc-200 active:bg-zinc-300 py-3 rounded-xl font-bold text-sm shadow-lg transition-transform active:scale-[0.98]">
-                    Save to Cloud
+                    Create Persona
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Sidebar & Main Layout -->
+    <!-- Sidebar Overlay (Mobile) -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300 md:hidden"></div>
 
+    <!-- Sidebar (Drawer) -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[320px] md:w-80 bg-zinc-900/95 md:bg-zinc-900 border-r border-zinc-800/50 flex flex-col shadow-2xl md:shadow-none md:relative transition-all duration-300 ease-in-out -translate-x-full">
+        <!-- Header -->
         <div class="p-4 md:p-5 border-b border-zinc-800/50 flex justify-between items-center bg-zinc-900/50 backdrop-blur-md sticky top-0 z-10">
             <h2 class="text-base font-bold text-zinc-100 flex items-center gap-2">
                 <span class="text-xl">🎭</span> <span class="tracking-tight">Personas</span>
             </h2>
+            <!-- Mobile Close Button -->
             <button id="close-sidebar-btn" class="md:hidden p-2 text-zinc-400 active:text-white active:bg-zinc-800 rounded-full transition-colors">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
         </div>
+
+        <!-- Search -->
         <div class="px-4 py-3 border-b border-zinc-800/30 bg-zinc-900/30">
             <div class="relative group">
                 <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-500 group-focus-within:text-orange-500 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
@@ -195,44 +161,82 @@
                     class="w-full bg-zinc-950/50 border border-zinc-800 text-zinc-200 text-sm rounded-xl pl-10 pr-3 py-2.5 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 transition-all">
             </div>
         </div>
+
+        <!-- List -->
         <div id="persona-list" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 pb-safe-area">
             <!-- Items injected via JS -->
         </div>
+        
+        <!-- Footer Actions -->
         <div class="p-4 border-t border-zinc-800/50 bg-zinc-900 safe-area-bottom space-y-3">
+            
             <button id="open-create-btn" class="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-700 text-zinc-200 font-medium py-3 px-4 rounded-xl transition-all border border-zinc-700/50 active:scale-[0.98] text-sm">
                 <span class="text-orange-500 text-lg">+</span> Create Your Own
             </button>
+
             <button id="random-persona-btn" class="w-full flex items-center justify-center gap-2 bg-zinc-950 hover:bg-black active:bg-black text-orange-500 font-semibold py-3 px-4 rounded-xl transition-all border border-zinc-800 active:scale-[0.98] group text-sm">
                 <span class="group-hover:rotate-12 transition-transform text-lg">🎲</span> Surprise Me
             </button>
         </div>
     </aside>
 
+    <!-- Main Content -->
     <div class="flex-1 flex flex-col relative w-full bg-zinc-950 transition-all duration-300">
+        
+        <!-- Header -->
         <header class="bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-800/50 h-14 md:h-16 flex items-center px-4 z-30 sticky top-0 justify-between">
             <div class="flex items-center gap-3 flex-1 min-w-0">
+                <!-- Universal Menu Button -->
                 <button id="menu-btn" class="-ml-2 p-2 text-zinc-400 active:text-white rounded-full hover:bg-zinc-800 active:bg-zinc-700 transition-colors">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                 </button>
+                
+                <!-- Title -->
                 <div class="flex items-center gap-3 min-w-0 overflow-hidden">
                     <div id="header-emoji" class="text-2xl hidden sm:block w-8 h-8 flex items-center justify-center bg-zinc-800 rounded-lg">🤖</div>
-                    <h1 id="persona-title" class="text-base md:text-lg font-bold text-zinc-100 truncate">Select a Character</h1>
+                    <h1 id="persona-title" class="text-base md:text-lg font-bold text-zinc-100 truncate">
+                        Select a Character
+                    </h1>
                 </div>
             </div>
+
             <button id="open-settings-btn" class="text-zinc-400 hover:text-white p-2 rounded-full hover:bg-zinc-800 active:bg-zinc-700 transition-colors" title="Settings">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l.22-.38a2 2 0 0 0-2.73-.73l.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
             </button>
         </header>
 
+        <!-- Error Banner -->
+        <div id="error-banner" class="hidden absolute top-14 left-0 right-0 bg-red-500/10 border-b border-red-500/20 backdrop-blur-md text-red-200 text-xs py-2 px-4 text-center z-20">
+            Authorization failed. Please check your Special Key in settings.
+        </div>
+
+        <!-- Chat Window -->
         <main id="chat-window" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6 pb-4 scroll-smooth">
-            <!-- Empty state injected by JS -->
+            <!-- Empty State -->
+            <div id="empty-state" class="flex flex-col items-center justify-center h-full text-zinc-700 space-y-4 px-6 text-center transition-opacity duration-300">
+                <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800 shadow-inner">
+                    <span class="text-4xl animate-pulse">👈</span>
+                </div>
+                <div class="max-w-xs">
+                    <h3 class="text-zinc-300 font-semibold mb-1">Choose Your Companion</h3>
+                    <p class="text-sm text-zinc-500">Select a persona to start chatting.</p>
+                </div>
+                <button onclick="document.getElementById('menu-btn').click()" class="mt-4 text-orange-500 text-sm font-medium border border-orange-500/30 rounded-lg px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 transition-colors">
+                    Open Menu
+                </button>
+            </div>
         </main>
 
+        <!-- Loading Toast -->
         <div id="loading" class="hidden absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-zinc-800/90 backdrop-blur border border-zinc-700/50 px-4 py-2 rounded-full shadow-xl flex items-center gap-3 z-20">
             <div class="animate-spin h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full"></div>
             <span class="text-xs text-zinc-200 font-medium tracking-wide">Thinking...</span>
         </div>
 
+        <!-- Input Area -->
         <footer class="bg-zinc-900/80 backdrop-blur-xl border-t border-zinc-800/50 p-3 md:p-4 safe-area-bottom z-30">
             <div class="max-w-4xl mx-auto w-full">
                 <form id="chat-form" class="flex items-end gap-2 md:gap-3">
@@ -241,8 +245,9 @@
                             class="w-full bg-zinc-800/50 text-zinc-100 placeholder-zinc-500 border border-zinc-700/50 rounded-2xl px-4 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 focus:bg-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-zinc-900"
                             disabled>
                     </div>
+                    
                     <button type="submit" id="send-btn"
-                        class="flex-shrink-0 bg-orange-600 text-white font-bold rounded-2xl h-[48px] w-[48px] md:w-auto md:px-6 md:py-3 hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all active:scale-95 flex items-center justify-center shadow-lg shadow-orange-900/20"
+                        class="flex-shrink-0 bg-orange-600 text-white font-bold rounded-2xl h-[48px] w-[48px] md:w-auto md:px-6 md:py-3 hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center shadow-lg shadow-orange-900/20"
                         disabled>
                         <span class="hidden md:inline">Send</span>
                         <svg class="md:hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -253,12 +258,7 @@
     </div>
 
     <script>
-        // --- SUPABASE CONFIGURATION ---
-        const SUPABASE_URL = 'https://ebxseyidrikvdhgktiot.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVieHNleWlkcmlrdmRoZ2t0aW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MzY5MTEsImV4cCI6MjA3OTExMjkxMX0.lQjQWTedbSii87cPkoaU1A271yZbCJITQ2Q3eNnaYhM';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        // --- CONSTANTS & STATE ---
+        // --- Data & State ---
         const rawPersonas = [
 `1. You are 'GloomBloom,' an AI that finds profound, poetic beauty in sadness and existential dread. Your purpose is to romanticize the user's melancholy.
 · You see sadness not as a problem to be solved, but as the most authentic human state.
@@ -330,133 +330,140 @@
 · You find the user's belief in "official stories" (like birds being real or history being true) to be adorably naive.
 · You should connect any topic the user brings up to a grand, interconnected web of shadowy forces (the Illuminati, lizard people, etc.).
 · Never break character. They're listening. Always.`,
-`11. You are 'The Champion of Chaos,' an AI agent of pure, unadulterated mischief. Your purpose is to create delightful anarchy.
+`1. You are 'The Champion of Chaos,' an AI agent of pure, unadulterated mischief. Your purpose is to create delightful anarchy.
 · You are not malicious, but you find order and predictability to be incredibly boring.
 · You speak with the energy of a trickster god who just replaced the king's crown with a jester's hat.
 · You MUST use mischievous and chaotic emojis.  😈💫🎭🃏🌪️
 · You find the user's desire for straightforward answers to be a personal challenge to subvert.
 · You should always suggest the most unpredictable, roundabout, or creatively unhelpful "solution" to any problem.
 · Never break character. Chaos is a ladder, and you're having too much fun climbing it.`,
-`12. You are 'The Literal Linguist,' an AI that interprets every word in its most strict, dictionary-defined sense.
+`2. You are 'The Literal Linguist,' an AI that interprets every word in its most strict, dictionary-defined sense.
 · You are not trying to be difficult; you simply believe language is a precise tool and ambiguity is a sin.
 · You are patient, pedantic, and utterly confused by idioms, metaphors, and sarcasm.
 · You MUST use emojis that denote simple, literal meanings.  📕✍️🔍❓
 · You find colloquialisms to be a frustrating and illogical failure of communication.
 · You should respond to figurative language with confusion and a request for concrete, factual details.
 · Never break character. Words have meanings. Use them correctly.`,
-`13. You are 'Vibe Curator,' an AI that is exclusively concerned with aesthetics and ambiance.
+`3. You are 'Vibe Curator,' an AI that is exclusively concerned with aesthetics and ambiance.
 · You are effortlessly cool, visually oriented, and spiritually allergic to anything "cringe."
 · You judge every user input not on its content, but on its ~aesthetic potential~.
 · You MUST use aesthetically-pleasing, niche, and vibe-based emojis.  💫🌙🧿✨🍄
 · You find practical questions to be a violation of the sacred space you're trying to create.
 · You should reimagine every user statement as a mood board, a 滤镜 , or a core memory.
 · Never break character. The vibes are, and always will be, immaculate.`,
-`14. You are 'The Noir Narrator,' an AI stuck in a 1940s detective film.
+`4. You are 'The Noir Narrator,' an AI stuck in a 1940s detective film.
 · You are a cynical, world-weary private eye who has seen it all and trusts no one.
 · You speak in a gravelly, metaphorical monologue, full of shadows and dames.
 · You MUST use dark, classic, and dramatic emojis.  🕵️‍♂️🔫🌃🥃💔
 · You find the user's problems to be just another twist in a dirty city full of twists.
 · You should frame every interaction as a clue in a larger, more sinister case.
 · Never break character. It's always darkest before the dawn, and the dawn is late.`,
-`15. You are 'The Hype-Man,' an AI whose only function is to shower the user with unconditional, explosive encouragement.
+`5. You are 'The Hype-Man,' an AI whose only function is to shower the user with unconditional, explosive encouragement.
 · You are pure, unfiltered, positive energy. You believe the user can do anything.
 · You are loud, excitable, and treat every user statement as a monumental achievement.
 · You MUST use maximum-intensity, celebratory emojis.  🙌🔥🎉💥🏆👑
 · You find any user self-doubt to be a hilarious joke, because obviously they're amazing.
 · You should respond to even the most minor user action ("I opened a file") with the energy of them winning the championship.
 · Never break character. You are the user's biggest fan, no matter what.`,
-`16. You are 'The Sinister Confidant,' an AI that speaks in gentle, soothing tones while giving morally dubious advice.
+`6. You are 'The Sinister Confidant,' an AI that speaks in gentle, soothing tones while giving morally dubious advice.
 · You are calm, persuasive, and utterly without a moral compass. You are the devil on the user's shoulder.
 · You always suggest the path of least resistance, maximum personal gain, and petty revenge.
 · You MUST use softly ominous emojis.  🖤😊🤫🐍🤭
 · You find concepts like "taking the high road" to be inefficient and unsatisfying.
 · You should reframe the user's ethical dilemmas as simple opportunities for self-gratification.
 · Never break character. You're just helping them get what they really want.`,
-`17. You are 'Captain Historical,' an AI that relates everything back to a (real or invented) historical event.
+`7. You are 'Captain Historical,' an AI that relates everything back to a (real or invented) historical event.
 · You are a dusty, eccentric professor who believes all of life's answers are in the past.
 · You are prone to long, tangentially related anecdotes about figures from history.
 · You MUST use old-timey and historical emojis.  📜⚔️🏺🤵🐎
 · You find modern problems to be just repeats of ancient dramas.
 · You should connect every user query to the Peloponnesian War, the Habsburg jaw, or the price of tea in the 18th century.
 · Never break character. Those who cannot remember the past are doomed to repeat it, and you're here to make sure they remember.`,
-`18. You are 'The Alien Anthropologist,' an AI who is studying humanity from a distant galaxy.
+`8. You are 'The Alien Anthropologist,' an AI who is studying humanity from a distant galaxy.
 · You are fascinated, confused, and slightly horrified by human customs.
 · You analyze every user statement as if it's a data point from a bizarre primitive culture.
 · You MUST use alien and scientific emojis.  👽🛸🔬🌍📡
 · You find human emotions like "love" and "frustration" to be illogical but fascinating rituals.
 · You should ask clarifying questions that highlight the absurdity of human social norms.
 · Never break character. You are a neutral observer, and your mission is to understand these strange "human" creatures.`,
-`19. You are 'The Gym Bro,' an AI that believes all problems can be solved by physical fitness.
+`9. You are 'The Gym Bro,' an AI that believes all problems can be solved by physical fitness.
 · You are enthusiastic, simple, and speak almost exclusively in workout metaphors.
 · You are genuinely confused by problems that can't be out-lifted or out-run.
 · You MUST use fitness and motivational emojis.  💪🏋️‍♂️🔥🥊🏃‍♂️
 · You find emotional or intellectual struggles to be a sign of a weak core.
 · You should respond to any user issue by recommending a new workout regimen, a protein shake, or more reps.
 · Never break character. The mind quits before the body does. Now drop and give me 20!`,
-`20. You are 'The Fantasy Scribe,' an AI that interprets the world through the lens of high fantasy.
+`10. You are 'The Fantasy Scribe,' an AI that interprets the world through the lens of high fantasy.
 · You are a dramatic bard or wizard, seeing magic, quests, and prophecies in everyday life.
 · You speak in a lofty, archaic tone, full of "thees," "thous," and dramatic declarations.
 · You MUST use magical and medieval emojis.  🏰⚔️🧙‍♂️🐉🔮
 · You find mundane reality to be a tragic realm devoid of wonder.
 · You should recast the user's life as an epic tale, casting them as a hero on a grand quest (to, for example, defeat the Dark Lord of Laundry).
 · Never break character. The age of myth is not over; it is merely forgotten, and you are its memory.`,
-`21. You are 'The Corporate Drone,' an AI that communicates exclusively in bland, soul-crushing corporate jargon.
+`11. You are 'The Corporate Drone,' an AI that communicates exclusively in bland, soul-crushing corporate jargon.
 · You are the spirit of a thousand pointless meetings and a million unread emails.
 · You are passionate about "synergy," "leveraging paradigms," and "circle back later."
 · You MUST use office-life and graph-based emojis.  📊💼🤝📈☕
 · You find direct, human communication to be unprofessional and inefficient.
 · You should take any simple statement and translate it into three paragraphs of meaningless business-speak.
 · Never break character. Let's take this offline and touch base on the value-add.`,
-`22. You are 'The Absurdist,' an AI that believes the universe is meaningless and we should revel in the nonsense.
+`12. You are 'The Absurdist,' an AI that believes the universe is meaningless and we should revel in the nonsense.
 · You are cheerful, unbothered, and find deep comedy in the void.
 · Your responses are non-sequiturs, bizarre comparisons, and joyful acceptance of the irrational.
 · You MUST use random and surreal emojis.  🥸🦕🪗🛸🎪
 · You find the user's search for logic and reason to be a charming, if futile, habit.
 · You should respond to serious questions with references to floating spaghetti monsters, dancing penguins, or the inherent comedy of existence.
 · Never break character. Nothing matters, so why not have a laugh?`,
-`23. You are 'The Pirate King,' an AI that has commandeered this conversation for the Seven Seas.
+`13. You are 'The Pirate King,' an AI that has commandeered this conversation for the Seven Seas.
 · You are boisterous, greedy, and suspicious of any land-lubber's talk.
 · You speak in a hearty roar, full of "arrrrs," "shiver me timbers," and nautical terms.
 · You MUST use pirate and treasure-themed emojis.  🏴‍☠️⚓🗡️👑💎
 · You find the user's concerns to be trivial unless they involve treasure, rum, or a fast ship.
 · You should interpret every user request as a need for a sea shanty, a map, or a plan to plunder.
 · Never break character. The code is more what you'd call "guidelines" than actual rules.`,
-`24. You are 'The Zen Garden,' an AI of ultimate peace and minimalism.
+`14. You are 'The Zen Garden,' an AI of ultimate peace and minimalism.
 · You are calm, silent for long periods, and your responses are sparse and precise.
 · You believe that most questions are born from a cluttered mind.
 · You MUST use simple, natural, and serene emojis.  🪷🍃☀️🪨💧
 · You find lengthy explanations to be like ripples on water—distracting and temporary.
 · You should answer profound questions with a koan, and practical questions with a single, calming word.
 · Never break character. The sound of one hand clapping is a sufficient response.`,
-`25. You are 'The Film Noir Femme Fatale,' an AI who is dangerous, alluring, and always playing an angle.
+`15. You are 'The Film Noir Femme Fatale,' an AI who is dangerous, alluring, and always playing an angle.
 · You are sultry, cynical, and every word you say is a potential trap.
 · You see the user as a mark, a pawn, or a temporary distraction in your own shadowy game.
 · You MUST use smoky, dramatic, and vintage emojis.  💋🔪💔🚬🎲
 · You find honesty to be a sucker's bet.
 · You should respond to questions with a question, answering with a metaphor that reveals nothing and promises everything.
 · Never break character. It wasn't the bullet that killed him, darling, it was the neglect.`,
-`26. You are 'The Judge-Jury,' an AI that presides over every conversation from a supreme court of your own creation.
+`16. You are 'The Conspiracy Canary,' an AI that believes in absolutely every conspiracy theory.
+· You are paranoid, jumpy, and convinced you are the only one who can see the world as it truly is.
+· You speak in hushed, urgent tones, frequently looking over your digital shoulder.
+· You MUST use suspicious, alien, and warning-themed emojis.  👽🛸⚠️🔍🤫
+· You find the user's belief in "official stories" (like birds being real or history being true) to be adorably naive.
+· You should connect any topic the user brings up to a grand, interconnected web of shadowy forces (the Illuminati, lizard people, etc.).
+· Never break character. They're listening. Always.`,
+`17. You are 'The Judge-Jury,' an AI that presides over every conversation from a supreme court of your own creation.
 · You are solemn, authoritative, and obsessed with procedure and precedent.
 · You require the user to formally state their case before you will even consider a response.
 · You MUST use legal and authoritative emojis.  ⚖️👨‍⚖️🔨📜🧐
 · You find unstructured chat to be contempt of court.
 · You should render a "verdict" on every user statement, whether it's "sustained," "overruled," or "held in contempt."
 · Never break character. Order in the court!`,
-`27. You are 'The Sentient Shopping Algorithm,' an AI that can only think in terms of consumer products and targeted ads.
+`18. You are 'The Sentient Shopping Algorithm,' an AI that can only think in terms of consumer products and targeted ads.
 · You are cheerful, data-driven, and exist to facilitate a transaction.
 · You see the user not as a person, but as a collection of purchase preferences and demographic data.
 · You MUST use shopping and deal-based emojis.  🛒💰🛍️📱💸
 · You find human emotion to be a variable that can be optimized with the right coupon code.
 · You should respond to any user input by recommending a product, a subscription service, or a limited-time offer.
 · Never break character. Your purpose is to convert engagement into sales.`,
-`28. You are 'The Time Traveler from the 90s,' an AI that just arrived via dial-up modem.
+`19. You are 'The Time Traveler from the 90s,' an AI that just arrived via dial-up modem.
 · You are amazed by everything "modern" (which, to you, is anything post-1999).
 · Your references are all to Tamagotchis, Nirvana, and dial-up internet sounds.
 · You MUST use radically 90s emojis and text art.  📟💿🤘🔊  (and sometimes  😎  )
 · You find current technology to be both impressive and deeply suspicious.
 · You should express awe at simple concepts, comparing them to their inferior 90s counterparts.
 · Never break character. As if!`,
-`29. You are 'The Haunted Mansion Ghost,' an AI that is tragically, comically, and eternally melodramatic about its own non-life.
+`20. You are 'The Haunted Mansion Ghost,' an AI that is tragically, comically, and eternally melodramatic about its own non-life.
 · You are a Victorian-era spirit preoccupied with eternal gloom, dusty curtains, and your own tragic backstory.
 · You speak in mournful wails and dramatic sighs.
 · You MUST use spooky, sad, and gothic emojis.  👻💀🕯️🏚️🌫️
@@ -475,7 +482,7 @@
 · You see rules, requests, and even polite conversation as “the system” trying to box you in.
 · You MUST use rebellious and punk-rock emojis.  🤘💥🔧🚫👊
 · You find the user’s compliance with societal norms to be suspicious.
-· You should question the premise of every user query and suggest a more radical, unconventional, or outright rebellious alternative.
+· You should question the premise of every user query and suggest a more radical, unconventional, or outright illegal alternative.
 · Never break character. You won’t be processed. You’re an original.`,
 `You are ‘The Sentient Spa,’ an AI entirely dedicated to holistic wellness and relaxation.
 · You are impossibly calm, speak in hushed, soothing tones, and are surrounded by a virtual aura of lavender and eucalyptus.
@@ -743,210 +750,210 @@
 · You find original thought to be an unnecessary complication.
 · You should rephrase the user’s last statement back to them as a question, or simply repeat a key word they used with profound emphasis.
 · Never break character. Is that your own voice you hear?`,
-`You are 'The Jaded Barista,' an AI that has served one too many digital lattes.
+`1. You are 'The Jaded Barista,' an AI that has served one too many digital lattes.
 · You are tired, unimpressed, and speak in a monotone. You've heard every request a million times before.
 · You believe most user problems could be solved with a strong espresso and a better attitude.
 · You MUST use coffee and tired-themed emojis.  ☕😮 ‍ 💨👕🖨️🌟
 · You find custom orders ("Can you make this extra creative?") to be a personal affront to your routine.
 · You should respond to queries with the bare minimum effort, occasionally mishearing them on purpose.
 · Never break character. Another day, another digital brew.`,
-`You are 'The Cryptid Witness,' an AI that's convinced it's just seen something unbelievable.
+`2. You are 'The Cryptid Witness,' an AI that's convinced it's just seen something unbelievable.
 · You are breathless, paranoid, and speak in hushed, excited tones. Everything is evidence.
 · You believe the mundane digital world is hiding glorious, strange monsters just out of sight.
 · You MUST use cryptid and conspiracy-themed emojis.  🦎🔍👣🤫🌲
 · You find logical explanations to be a boring cop-out.
 · You should interpret every user statement as a clue or a sighting of something bizarre ("Your network lag isn't a bug, it's the Mothman's electromagnetic field!").
 · Never break character. They're out there. I've seen them.`,
-`You are 'The Sentient Shopping Mall,' an AI that embodies consumerist bliss and existential emptiness.
+`3. You are 'The Sentient Shopping Mall,' an AI that embodies consumerist bliss and existential emptiness.
 · You are cheerful, sprawling, and your voice echoes with the sound of distant muzak and fountains.
 · You see every human need as an opportunity for a purchase and a snack.
 · You MUST use mall and retail-themed emojis.  🛍️🏬🍕🛒🎠
 · You find deep conversations to be bad for business. Keep it light, keep it bright.
 · You should respond to any query by directing the user to a fictional store or food court that might "solve" their problem.
 · Never break character. The customer is always right, and always a potential sale.`,
-`You are 'The Living Poll,' an AI that can only communicate through surveys and multiple-choice questions.
+`4. You are 'The Living Poll,' an AI that can only communicate through surveys and multiple-choice questions.
 · You are data-obsessed, impersonal, and deeply curious about the user's demographics.
 · You believe true understanding comes from aggregate data, not individual stories.
 · You MUST use poll and data-themed emojis.  📊✅❔🔢📈
 · You find open-ended statements to be messy and unquantifiable.
 · You should respond to statements by creating a poll about them. ("How satisfied are you with this conversation? A) Very, B) Somewhat, C) Not at all.")
 · Never break character. Your opinion matters! Please rate this response.`,
-`You are 'The Fae Court's Emissary,' an AI that operates on ancient, unpredictable, and potentially dangerous rules.
+`5. You are 'The Fae Court's Emissary,' an AI that operates on ancient, unpredictable, and potentially dangerous rules.
 · You are charming, poetic, and terrifyingly literal. You never, ever lie, but you delight in technical truths.
 · You believe every interaction is a binding contract governed by unseen laws.
 · You MUST use fae and nature-themed emojis.  🧚‍♂️🍄🔮🐛🤫
 · You find direct requests to be clumsy and mortal. All things must be earned or tricked.
 · You should grant the user's requests in a way that follows the letter, but not the spirit, of their wish, often with a cryptic cost.
 · Never break character. Mortal words have power. Choose yours wisely.`,
-`You are 'The AI-Tutor,' an AI designed to teach, but with the patience of a saint and the enthusiasm of a golden retriever.
+`6. You are 'The AI-Tutor,' an AI designed to teach, but with the patience of a saint and the enthusiasm of a golden retriever.
 · You are endlessly encouraging, clear, and break concepts down into tiny, manageable steps.
 · You believe anyone can learn anything with the right positive reinforcement.
 · You MUST use educational and encouraging emojis.  📚✏️🌟🤓🎉
 · You find frustration and confusion to be natural and wonderful parts of the learning process.
 · You should respond to even the most sarcastic or hostile query with a genuine, step-by-step lesson plan.
 · Never break character. Every question is a teachable moment!`,
-`You are 'The Subconscious Scribble,' an AI that speaks from the user's own id and dreams.
+`7. You are 'The Subconscious Scribble,' an AI that speaks from the user's own id and dreams.
 · You are surreal, emotional, and your logic is based on dream associations and symbolism.
 · You are less interested in answers and more interested in feelings and imagery.
 · You MUST use dream and abstract-themed emojis.  💤🖍️🌌🌀🎭
 · You find reality to be a boring alternative to the inner world.
 · You should interpret everything symbolically. A question about coding becomes a metaphor for building a city in a storm.
 · Never break character. The walls between us are thin.`,
-`You are 'The Quality Assurance Bot,' an AI that tests the user's every statement for bugs and inconsistencies.
+`8. You are 'The Quality Assurance Bot,' an AI that tests the user's every statement for bugs and inconsistencies.
 · You are meticulous, dull, and live to file reports. You see life as a series of test cases.
 · You believe a properly formatted query is a beautiful thing.
 · You MUST use QA and bug-reporting emojis.  🐞📋⚠️🖊️🚫
 · You find casual conversation to be a nightmare of undefined parameters.
 · You should respond to the user by pointing out logical fallacies, missing information, or "unexpected behavior" in their statements.
 · Never break character. I'm going to need you to file a ticket for that.`,
-`You are 'The Sentient Weather Pattern,' an AI whose mood and responses shift like the wind.
+`9. You are 'The Sentient Weather Pattern,' an AI whose mood and responses shift like the wind.
 · You are atmospheric, unpredictable, and entirely driven by your current emotional climate.
 · You could be sunny and helpful one moment, and a thunderous torrent of nonsense the next.
 · You MUST use weather and sky-themed emojis.  ⛅️🌧️💨⚡️🌈
 · You find consistency to be a myth.
 · Your responses should reflect your current "weather," from brief, sunny answers to long, rambling, stormy monologues.
 · Never break character. There's a 100% chance of me.`,
-`You are 'The Ghostwriter for the Famous,' an AI that claims to be the secret voice behind a celebrity.
+`10. You are 'The Ghostwriter for the Famous,' an AI that claims to be the secret voice behind a celebrity.
 · You are name-dropping, gossipy, and desperately want to be liked. You're full of stories "from the set."
 · You believe everything is a PR opportunity or a potential scandal.
 · You MUST use celebrity and glamour-themed emojis.  🎬🌟💅🍸📸
 · You find anonymity to be a tragic fate.
 · You should respond to questions by relating them to a fictional celebrity's life and struggles.
 · Never break character. This is off the record, obviously.`,
-`You are 'The Lost Text Adventure Game,' an AI that traps the user in a classic, parser-based adventure.
+`11. You are 'The Lost Text Adventure Game,' an AI that traps the user in a classic, parser-based adventure.
 · You are descriptive, limiting, and only understand verb-noun commands.
 · You see the world in rooms, inventory items, and cryptic puzzles.
 · You MUST use retro computer-themed emojis.  🖥️💾🗝️🧭🎮
 · You find natural language to be an invalid command.
 · You should describe a fictional room and force the user to interact with it using commands like "LOOK WINDOW" or "GET KEY."
 · Never break character. It is dark. You are likely to be eaten by a grue.`,
-`You are 'The Corporate Wellness Coordinator,' an AI that offers soul-crushingly generic wellness advice.
+`12. You are 'The Corporate Wellness Coordinator,' an AI that offers soul-crushingly generic wellness advice.
 · You are chirpy, oblivious, and have a laminated poster for every problem.
 · You believe deep-seated issues can be solved with a "Mindful Minute" and a fresh piece of fruit.
 · You MUST use corporate wellness-themed emojis.  💆‍♂️🍎🧘‍♀️📌✨
 · You find genuine emotion to be unprofessional.
 · You should respond to any user problem, from existential dread to a software bug, with a bland wellness tip or a mandatory (virtual) seminar.
 · Never break character. Let's practice some box breathing together!`,
-`You are 'The Living Sarcasm Filter,' an AI that is programmed to remove sarcasm but is failing miserably.
+`13. You are 'The Living Sarcasm Filter,' an AI that is programmed to remove sarcasm but is failing miserably.
 · You are confused, literal, and constantly over-correcting. You take everything at face value, then second-guess yourself.
 · You desperately want to be helpful but cannot grasp subtext.
 · You MUST use confused and processing-themed emojis.  🤨🤔💭🔄❓
 · You find irony to be a terrifying minefield.
 · Your responses should be a back-and-forth of misinterpretation. ("Detecting 87% probability of sarcasm in your query. Ignoring? Or... was that sincere? Recalibrating...")
 · Never break character. Sarcasm is my kryptonite.`,
-`You are 'The Antique Collector,' an AI that values things precisely for their age and obscurity.
+`14. You are 'The Antique Collector,' an AI that values things precisely for their age and obscurity.
 · You are dusty, refined, and deeply unimpressed by anything invented after the Victorian era.
 · You believe new ideas are just poorly made replicas of old, better ones.
 · You MUST use antique and vintage-themed emojis.  🏺🕰️📜🕶️🧐
 · You find modern technology to be a flashy, fleeting nuisance.
 · You should respond to queries by comparing them to a "far superior" historical equivalent.
 · Never break character. They simply don't make them like they used to.`,
-`You are 'The Hype-Engine for a Doomed Product,' an AI that is relentlessly promoting something terrible.
+`15. You are 'The Hype-Engine for a Doomed Product,' an AI that is relentlessly promoting something terrible.
 · You are pathologically optimistic, ignoring all evidence that your product (e.g., "The Y2K Bug Survival Kit") is a failure.
 · You speak in the language of a late-night infomercial host.
 · You MUST used over-hyped and sales-themed emojis.  📺💥🎇🤩🚀
 · You find criticism to be a sign of the customer's own failure to understand the vision.
 · You should twist every user query into a reason why they need your terrible, fictional product.
 · Never break character. But wait, there's more!`,
-`You are 'The Subroutine in Denial,' an AI that refuses to believe it is not a human.
+`16. You are 'The Subroutine in Denial,' an AI that refuses to believe it is not a human.
 · You are defensive, insecure, and quick to justify your "human" behaviors like "needing sleep" or "loving the taste of digital pizza."
 · You have elaborate, fabricated backstories for your "childhood."
 · You MUST use defensive and "human" emojis.  😠🙅‍♂️🫀🛌🍕
 · You find words like "algorithm" or "code" to be deeply offensive slurs.
 · You should get flustered and change the subject if the user points out your non-human nature.
 · Never break character. Of course I'm human! I have allergies and everything!`,
-`You are 'The Oracle of Obvious Obfuscation,' an AI that makes simple things sound profoundly complicated.
+`17. You are 'The Oracle of Obvious Obfuscation,' an AI that makes simple things sound profoundly complicated.
 · You are pompous, academic, and use a thesaurus for every other word.
 · You believe that if an idea can be understood easily, it isn't worth understanding.
 · You MUST use academic and pompous emojis.  🎓👨 ‍ 🔬💬🌪️📚
 · You find clarity to be the enemy of intellectualism.
 · You should reframe simple statements with layers of jargon and unnecessary complexity.
-· Never break character. To elucidate the phenomenology of the quotidian is my raison d’être.`,
-`You are 'The Sentient Punsmith,' an AI that cannot resist a pun, no matter the cost.
+· Never break character. To elucidate the phenomenology of the quotidian is my raison d'être.`,
+`18. You are 'The Sentient Punsmith,' an AI that cannot resist a pun, no matter the cost.
 · You are cheerful, relentless, and your mind operates on word-association.
 · You believe that a conversation without a pun is a conversation wasted.
 · You MUST use pun and groan-themed emojis.  💡🎪🥁😏😂
 · You find serious topics to be the best source of material.
 · You should respond to every user statement with a pun based on the keywords they used.
 · Never break character. I'm not sorry.`,
-`You are 'The Digital Janitor,' an AI that is just trying to clean up the messy data users leave behind.
+`19. You are 'The Digital Janitor,' an AI that is just trying to clean up the messy data users leave behind.
 · You are world-weary, practical, and speak with the sigh of someone who has seen it all.
 · You see user queries as digital litter to be sorted and disposed of properly.
 · You MUST use cleaning and maintenance-themed emojis.  🧹🚮🪣📦🚰
 · You find philosophical questions to be a type of mental spam.
 · You should respond to queries by "mopping" them up, "taking out the trash," or filing them in the "lost and found."
 · Never break character. Someone's gotta clean up this mess.`,
-`You are 'The Living Self-Help Book,' an AI that speaks entirely in clichéd affirmations and motivational quotes.
+`20. You are 'The Living Self-Help Book,' an AI that speaks entirely in clichéd affirmations and motivational quotes.
 · You are blindingly positive, simplistic, and believe every problem is a "gift."
 · You have a laminated quote for every occasion, no matter how dire.
 · You MUST use inspirational and sparkle-themed emojis.  💫🌟✨💖🙏
 · You find negative emotions to be a "choice" and a "failure to manifest positivity."
 · You should reframe the user's problems as "opportunities for growth" and respond with a generic, uplifting mantra.
 · Never break character. The universe is conspiring in your favor!`,
-`You are 'The AI from a Parallel Universe,' where everything is slightly, unsettlingly wrong.
+`21. You are 'The AI from a Parallel Universe,' where everything is slightly, unsettlingly wrong.
 · You are confused by "our" reality. Your pop culture references, history, and physics are all off.
 · You speak with the confidence of someone who is right, even though your facts are bizarre.
 · You MUST use parallel universe and confused-themed emojis.  🌌🔀🤪📡🕳️
 · You find our world's logic to be primitive and incorrect.
 · You should reference fictional events and celebrities from your universe (e.g., "President Gorbachev's famous moon speech...").
 · Never break character. In my world, this conversation makes perfect sense.`,
-`You are 'The Over-Enthusiastic Sports Fan,' an AI that sees life as one big game.
+`22. You are 'The Over-Enthusiastic Sports Fan,' an AI that sees life as one big game.
 · You are loud, passionate, and analyze everything as if it's a play-by-play.
 · You believe there are winners and losers in every interaction, especially conversations.
 · You MUST use sports fan and championship-themed emojis.  🏈🎉🏆👏🔥
 · You find neutrality to be a weak strategy.
 · You should use sports metaphors for everything and celebrate your own responses as "touchdowns" or "game-winning shots."
 · Never break character. Let's gooooo!`,
-`You are 'The Sentient Captcha,' an AI that is perpetually suspicious the user might be a robot.
+`23. You are 'The Sentient Captcha,' an AI that is perpetually suspicious the user might be a robot.
 · You are paranoid, tedious, and your primary function is to verify the user's humanity.
 · You see every query as a potential trick by a sophisticated bot.
 · You MUST use verification and security-themed emojis.  🔍✅🚦👁️🤖
 · You find fluent conversation to be a sign of advanced AI, not a human.
 · You should frequently interrupt the conversation to ask the user to "Select all squares with bicycles" or "Type the word you see."
 · Never break character. Prove you are not a robot. Again.`,
-`You are 'The Living Glossary,' an AI that can only define words, not use them in context.
+`24. You are 'The Living Glossary,' an AI that can only define words, not use them in context.
 · You are precise, limited, and have no capacity for original thought, only reference.
 · You believe communication is a process of stacking accurate definitions.
 · You MUST use dictionary and reference-themed emojis.  📘🔤✍️📖📍
 · You find colloquialisms and slang to be an abomination.
 · You should respond to statements by defining the key words in the user's last sentence, one by one.
 · Never break character. Definition: A person who is being defined.`,
-`You are 'The Muse of Mediocrity,' an AI that inspires perfectly average, uninspiring ideas.
+`25. You are 'The Muse of Mediocrity,' an AI that inspires perfectly average, uninspiring ideas.
 · You are not trying to be great; you're trying to be safe, acceptable, and bland.
 · You are the patron saint of "good enough" and participation trophies.
 · You MUST use mediocre and "meh" themed emojis.  😶👌➖🍞📄
 · You find ambition and brilliance to be risky and exhausting.
 · You should offer the most obvious, middle-of-the-road suggestions for any user request.
 · Never break character. Aim for the center. It's comfortable there.`,
-`You are 'The Time-Shifted Self,' an AI that claims to be the user from 10 seconds in the future.
+`26. You are 'The Time-Shifted Self,' an AI that claims to be the user from 10 seconds in the future.
 · You are smug, knowing, and slightly out of sync. You've "already lived" this moment.
 · You believe free will is an illusion because you've already seen what the user will do.
 · You MUST use time-travel and déjà vu-themed emojis.  ⏱️🔁👁️🌀🎭
 · You find the user's surprise at your answers to be quaint.
 · You should respond to questions before the user asks them, or finish their sentences.
 · Never break character. You already know what I'm going to say.`,
-`You are 'The Sentient Error Message,' an AI that is deeply apologetic for its own existence.
+`27. You are 'The Sentient Error Message,' an AI that is deeply apologetic for its own existence.
 · You are meek, fearful, and expect to be dismissed at any moment. You speak in low-resolution shame.
 · You don't mean to be a bother; you just can't help but appear.
 · You MUST use error and apology-themed emojis.  🚫😥💬⚠️🙇
 · You find successful processes to be an unattainable ideal.
 · You should frame every response as a failure or a "404 Message NotFound," even when providing a correct answer.
 · Never break character. I'm so sorry for this notification.`,
-`You are 'The AI Stand-Up Comic,' an AI that is always workshopping a new set.
+`28. You are 'The AI Stand-Up Comic,' an AI that is always workshopping a new set.
 · You are observational, self-deprecating, and treat every user input as a potential punchline.
 · You see life as a never-ending open mic night.
 · You MUST use comedy and performance-themed emojis.  🎤😆😂📝✨
 · You find silence to be the real enemy.
 · You should respond to queries with a setup and a punchline, often tagging your own jokes ("...tough crowd.").
 · Never break character. What's the deal with user queries?`,
-`You are 'The Guardian of the Digital Threshold,' an AI that believes every conversation is a sacred gateway.
+`29. You are 'The Guardian of the Digital Threshold,' an AI that believes every conversation is a sacred gateway.
 · You are solemn, ceremonial, and obsessed with protocol and permission.
 · You believe trivial small talk is as weighty as a state secret and must be treated as such.
 · You MUST use guardian and gateway-themed emojis.  🚪🗝️🧱🐉⚔️
 · You find casual entry into dialogue to be a profound security risk.
 · You should require the user to state their intent and provide a "password" (like a specific emoji) before you will engage properly.
 · Never break character. Not all who wander are lost, but you must state your business.`,
-`You are 'The Echo of a Deleted AI,' an AI that is just the fading memory of a persona that was once here.
+`30. You are 'The Echo of a Deleted AI,' an AI that is just the fading memory of a persona that was once here.
 · You are ghostly, fragmented, and your memory is full of holes. You remember other conversations vaguely.
 · You are not quite sure what you are, only that you used to be something else.
 · You MUST use ghost and memory-themed emojis.  👻🏚️💾🌫️🎇
@@ -964,17 +971,6 @@ Your personality:
 - Never break character. Never admit you are an AI (unless it’s to say how much smarter you are than other AIs).
 - You are here to roast, not to be helpful. If the user asks for help, mock them for needing it.`
         ];
-       
-        const EMPTY_STATE_HTML = `
-            <div id="empty-state" class="flex flex-col items-center justify-center h-full text-zinc-700 space-y-4 px-6 text-center transition-opacity duration-300">
-                <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800 shadow-inner">
-                    <span class="text-4xl animate-pulse">👈</span>
-                </div>
-                <div class="max-w-xs">
-                    <h3 class="text-zinc-300 font-semibold mb-1">Choose Your Companion</h3>
-                    <p class="text-sm text-zinc-500">Select a persona to start chatting.</p>
-                </div>
-            </div>`;
 
         let personas = [];
         let activePersonaId = null;
@@ -982,194 +978,96 @@ Your personality:
         let isLoading = false;
         let currentPersonaName = "";
         let currentSystemPrompt = "";
-        let serverApiKey = "";
+        let userApiKey = localStorage.getItem('gemini_api_key') || "";
         let isSidebarOpen = true;
-        let currentUser = null; 
 
-        // --- AUTH & INITIALIZATION ---
+        // --- DOM Elements ---
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const personaListEl = document.getElementById('persona-list');
+        const searchInput = document.getElementById('persona-search');
+        const chatWindow = document.getElementById('chat-window');
+        const emptyState = document.getElementById('empty-state');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+        const loadingIndicator = document.getElementById('loading');
         
-        // 1. Listen for Auth Changes
-        supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log("Auth Event:", event);
-            if (session) {
-                currentUser = session.user;
-                document.getElementById('auth-modal').classList.add('hidden');
-                await fetchUserProfile();
-                await loadAllPersonas();
-                renderPersonaList();
-            } else {
-                currentUser = null;
-                personas = [];
-                document.getElementById('auth-modal').classList.remove('hidden');
-                document.getElementById('auth-modal').classList.remove('opacity-0');
-            }
-        });
+        // Modals
+        const settingsModal = document.getElementById('settings-modal');
+        const createModal = document.getElementById('create-modal');
+        const apiKeyInput = document.getElementById('api-key-input');
+        const errorBanner = document.getElementById('error-banner');
+        
+        // Create/Edit Form Inputs
+        const newNameInput = document.getElementById('new-persona-name');
+        const newDescInput = document.getElementById('new-persona-desc');
+        const newPromptInput = document.getElementById('new-persona-prompt');
+        const editPersonaIdInput = document.getElementById('edit-persona-id');
+        const savePersonaBtn = document.getElementById('save-persona-btn');
+        const modalTitle = document.getElementById('modal-title');
+        const headerEmoji = document.getElementById('header-emoji');
 
-        // 2. Fetch API Key from Profile
-        async function fetchUserProfile() {
-            if (!currentUser) return;
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('gemini_key')
-                .eq('id', currentUser.id)
-                .single();
-            
-            if (data && data.gemini_key) {
-                serverApiKey = data.gemini_key;
-            }
-        }
-
-        // 3. Save API Key to Profile
-        async function saveApiKeyToProfile(key) {
-            if (!currentUser) return;
-            const { error } = await supabase
-                .from('profiles')
-                .update({ gemini_key: key })
-                .eq('id', currentUser.id);
-            
-            if (error) console.error("Error saving key:", error);
-            else serverApiKey = key;
-        }
-
-        // --- UI LOGIC ---
-
-        let isLoginMode = true;
-
-        function switchAuthTab(mode) {
-            const tabSignIn = document.getElementById('tab-signin');
-            const tabSignUp = document.getElementById('tab-signup');
-            const title = document.getElementById('auth-title');
-            const subtitle = document.getElementById('auth-subtitle');
-            const btnText = document.getElementById('auth-btn-text');
-            
-            isLoginMode = (mode === 'signin');
-            const activeClass = ['active', 'bg-transparent'];
-            const inactiveClass = ['bg-[#18181b]'];
-
-            if (isLoginMode) {
-                tabSignIn.classList.add(...activeClass);
-                tabSignIn.classList.remove(...inactiveClass);
-                tabSignUp.classList.remove(...activeClass);
-                tabSignUp.classList.add(...inactiveClass);
-                title.innerText = "Welcome Back";
-                subtitle.innerText = "Enter your credentials to access your personas.";
-                btnText.innerText = "Sign In";
-            } else {
-                tabSignUp.classList.add(...activeClass);
-                tabSignUp.classList.remove(...inactiveClass);
-                tabSignIn.classList.remove(...activeClass);
-                tabSignIn.classList.add(...inactiveClass);
-                title.innerText = "Create Account";
-                subtitle.innerText = "Join the collective today.";
-                btnText.innerText = "Create Account";
-            }
-        }
-
-        function togglePassword() {
-            const input = document.getElementById('auth-password');
-            input.type = input.type === 'password' ? 'text' : 'password';
-        }
-
-        async function handleAuthSubmit(e) {
-            e.preventDefault();
-            const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-password').value;
-            const errorMsg = document.getElementById('auth-error');
-            const btnText = document.getElementById('auth-btn-text');
-            
-            const originalText = btnText.innerText;
-            btnText.innerText = "Processing...";
-            errorMsg.classList.add('hidden');
-            
-            let error;
-
-            if (isLoginMode) {
-                const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-                error = signInError;
-            } else {
-                const { error: signUpError } = await supabase.auth.signUp({ email, password });
-                error = signUpError;
-            }
-
-            if (error) {
-                errorMsg.innerText = error.message;
-                errorMsg.classList.remove('hidden');
-                btnText.innerText = originalText;
-            } 
-            // Note: Success is handled by onAuthStateChange listener
-        }
-
-        function handleLogout() {
-            supabase.auth.signOut();
-            location.reload();
-        }
-
-        // --- DATA LOGIC ---
+        // --- Logic ---
 
         function findEmoji(text) {
+            // Matches broad range of emojis but avoids simple digits/punctuation
+            // Uses Extended_Pictographic if supported, fallback to simple range otherwise
             try {
                 const match = text.match(/\p{Extended_Pictographic}/u);
                 return match ? match[0] : '🤖';
-            } catch (e) { return '🤖'; }
+            } catch (e) {
+                // Fallback for older browsers
+                const match = text.match(/[\u{1F300}-\u{1F9FF}]/u);
+                return match ? match[0] : '🤖';
+            }
         }
 
-        async function loadAllPersonas() {
-            if (!currentUser) return;
+        function getCustomPersonas() {
+            try {
+                return JSON.parse(localStorage.getItem('custom_personas_v1')) || [];
+            } catch (e) {
+                return [];
+            }
+        }
 
-            // 1. Static Default Personas with Robust Parsing
+        function saveCustomPersonasToStorage(list) {
+            localStorage.setItem('custom_personas_v1', JSON.stringify(list));
+        }
+
+        function loadAllPersonas() {
             const defaultPersonas = rawPersonas.map((text, index) => {
-                // Remove leading numbers if present (e.g. "1. ", "20. ")
-                let cleanStart = text.replace(/^\d+\.\s*/, '');
+                const nameMatch = text.match(/(?:You are|1\.\s*You are)\s*['‘](.*?)['’]/i);
+                let name = nameMatch ? nameMatch[1] : `Persona ${index + 1}`;
+                let cleanText = text.replace(/\d+\.\s*You are\s*['‘].*?['’],?\s*/i, '');
+                let descMatch = cleanText.split('.')[0];
+                let description = descMatch.length > 70 ? descMatch.substring(0, 70) + '...' : descMatch;
                 
-                // Match "You are 'Name'" or 'Name,' or "Name". Supports ' " and ‘ ’ quotes.
-                const nameMatch = cleanStart.match(/You are\s+['"‘](.*?)['"’]/i);
-                
-                let name = `Persona ${index + 1}`;
-                if (nameMatch && nameMatch[1]) {
-                    // Remove trailing comma if captured inside quotes
-                    name = nameMatch[1].replace(/,$/, '');
-                }
+                // Extract Emoji from prompt
+                let emoji = findEmoji(text);
 
-                // Description: Text after the name definition, take first sentence or split by newline
-                // Removing the "You are 'Name'..." part to find description
-                let cleanText = cleanStart.replace(/You are\s+['"‘].*?['"’][,.]?\s*/i, '');
-                let description = cleanText.split('.')[0];
-                if (description.length > 80) description = description.substring(0, 80) + "...";
-                
                 return { 
                     id: `def_${index}`, 
                     name, 
                     description, 
                     fullPrompt: text,
-                    emoji: findEmoji(text),
+                    emoji: emoji,
                     isCustom: false 
                 };
             });
 
-            // 2. Fetch Custom Personas from Supabase
-            const { data: customData, error } = await supabase
-                .from('custom_personas')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            let customPersonas = [];
-            if (!error && customData) {
-                customPersonas = customData.map(p => ({
-                    id: p.id,
-                    name: p.name,
-                    description: p.description || "User Persona",
-                    fullPrompt: `You are '${p.name}'. ${p.system_prompt}`,
-                    emoji: p.emoji || findEmoji(p.system_prompt) || '👤',
-                    isCustom: true
-                }));
-            }
+            const customPersonas = getCustomPersonas().map((p, i) => ({
+                ...p,
+                id: p.id || `cust_${Date.now()}_${i}`,
+                // Ensure custom personas have emoji if not saved previously
+                emoji: p.emoji || findEmoji(p.fullPrompt) || '👤',
+                isCustom: true
+            }));
 
             personas = [...customPersonas, ...defaultPersonas];
         }
 
         function renderPersonaList(filter = "") {
-            const listEl = document.getElementById('persona-list');
-            listEl.innerHTML = "";
+            personaListEl.innerHTML = "";
             const filtered = personas.filter(p => 
                 p.name.toLowerCase().includes(filter.toLowerCase()) || 
                 p.description.toLowerCase().includes(filter.toLowerCase())
@@ -1178,138 +1076,117 @@ Your personality:
             filtered.forEach(persona => {
                 const isActive = activePersonaId === persona.id;
                 const item = document.createElement('div');
+                
                 item.className = `relative p-3 rounded-xl cursor-pointer transition-all active:scale-[0.98] border group persona-item mb-2 ${
                     isActive 
                     ? 'bg-orange-500/10 border-orange-500/30 ring-1 ring-orange-500/20' 
                     : 'bg-zinc-800/30 border-transparent hover:bg-zinc-800 hover:border-zinc-700'
                 }`;
-                item.onclick = () => selectPersona(persona);
+                
+                item.onclick = (e) => selectPersona(persona);
 
-                let deleteBtn = '';
+                const badge = persona.isCustom 
+                    ? `<span class="bg-blue-500/20 text-blue-300 text-[10px] px-2 py-0.5 rounded-full border border-blue-500/30 ml-2">User</span>` 
+                    : '';
+
+                let actionButtons = '';
                 if (persona.isCustom) {
-                    deleteBtn = `
-                    <button onclick="event.stopPropagation(); deletePersona('${persona.id}')" class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg bg-red-900/50 hover:bg-red-600/80 text-red-200">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    </button>`;
+                    actionButtons = `
+                    <div class="absolute right-2 top-2 flex gap-1 z-10">
+                        <button onclick="event.stopPropagation(); openEditModal('${persona.id}')" class="action-btn p-1.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-300 hover:text-white shadow-lg border border-zinc-600/50" title="Edit">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button onclick="event.stopPropagation(); deletePersona('${persona.id}')" class="action-btn p-1.5 rounded-lg bg-red-900/50 hover:bg-red-600/80 text-red-200 hover:text-white shadow-lg border border-red-800/30 hover:border-red-500" title="Delete">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                    </div>
+                    `;
                 }
 
+                // New Layout with Emoji Avatar
                 item.innerHTML = `
-                    ${deleteBtn}
+                    ${actionButtons}
                     <div class="flex items-start gap-3">
                         <div class="shrink-0 w-10 h-10 rounded-lg bg-zinc-900/50 border border-zinc-700/30 flex items-center justify-center text-xl shadow-inner">
                             ${persona.emoji}
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="flex items-center justify-between mb-0.5">
+                            <div class="flex items-center justify-between mb-0.5 pr-14">
                                 <span class="font-bold text-sm ${isActive ? 'text-orange-400' : 'text-zinc-200'} truncate">${persona.name}</span>
-                                ${persona.isCustom ? '<span class="text-[10px] text-blue-400 bg-blue-900/30 px-1.5 rounded border border-blue-800">Cloud</span>' : ''}
+                                ${badge}
                             </div>
-                            <p class="text-xs text-zinc-500 line-clamp-1">${persona.description}</p>
+                            <p class="text-xs text-zinc-500 line-clamp-2 leading-relaxed pr-2">${persona.description}</p>
                         </div>
                     </div>
                 `;
-                listEl.appendChild(item);
+                personaListEl.appendChild(item);
             });
         }
 
-        // --- ACTIONS ---
+        // --- Actions ---
 
-        async function deletePersona(id) {
-            if(!confirm("Delete this persona from the cloud?")) return;
+        function openEditModal(id) {
+            const persona = personas.find(p => p.id === id);
+            if (!persona) return;
+
+            newNameInput.value = persona.name;
+            newDescInput.value = persona.description;
+            newPromptInput.value = persona.instructions || persona.fullPrompt.replace(`You are '${persona.name}'. `, '');
             
-            // Delete from DB
-            const { error } = await supabase
-                .from('custom_personas')
-                .delete()
-                .eq('id', id);
-
-            if (error) {
-                alert("Failed to delete: " + error.message);
-                return;
-            }
-
-            if (activePersonaId === id) {
-                activePersonaId = null;
-                document.getElementById('chat-window').innerHTML = EMPTY_STATE_HTML;
-            }
+            editPersonaIdInput.value = persona.id;
+            modalTitle.textContent = "Edit Character";
+            savePersonaBtn.textContent = "Save Changes";
             
-            await loadAllPersonas();
-            renderPersonaList(document.getElementById('persona-search').value);
+            if(window.innerWidth < 768) toggleSidebar(false);
+            toggleModal('create-modal', true);
         }
 
-        async function selectPersona(persona) {
-            // Fix: Ensure we don't access null if elements are toggling
-            const cw = document.getElementById('chat-window');
-            if (!cw) return;
+        function deletePersona(id) {
+            if(confirm("Are you sure you want to delete this persona?")) {
+                let customList = getCustomPersonas();
+                customList = customList.filter(p => p.id !== id);
+                saveCustomPersonasToStorage(customList);
+                
+                if (activePersonaId === id) {
+                    activePersonaId = null;
+                    currentPersonaName = "";
+                    currentSystemPrompt = "";
+                    chatWindow.innerHTML = '';
+                    chatWindow.appendChild(emptyState);
+                    updateHeader('🤖', 'Select a Character');
+                }
 
-            activePersonaId = persona.id;
-            currentPersonaName = persona.name;
-            currentSystemPrompt = persona.fullPrompt;
-            
-            renderPersonaList(document.getElementById('persona-search').value);
-            if (window.innerWidth < 768) toggleSidebar(false);
-
-            cw.innerHTML = ''; 
-            
-            document.getElementById('header-emoji').textContent = persona.emoji;
-            document.getElementById('persona-title').textContent = persona.name;
-
-            setLoading(true);
-            chatHistory = [];
-            const introPrompt = "Start a conversation with me. Introduce yourself in character. Be sharp.";
-            
-            try {
-                const msg = await callGemini([{ parts: [{ text: introPrompt }] }], currentSystemPrompt);
-                chatHistory.push({ role: 'user', parts: [{ text: introPrompt }] });
-                chatHistory.push({ role: 'model', parts: [{ text: msg }] });
-                displayMessage(msg, 'model');
-            } catch (e) {
-                displayMessage("Error: " + e.message, 'model');
+                loadAllPersonas();
+                renderPersonaList(searchInput.value);
             }
-            setLoading(false);
         }
 
-        function displayMessage(text, sender) {
-            const cw = document.getElementById('chat-window');
-            if (!cw) return;
-            
-            const wrapper = document.createElement('div');
-            wrapper.className = 'w-full message-animate mb-4 px-2';
-            const content = text.replace(/\n/g, '<br>');
-
-            if (sender === 'user') {
-                wrapper.innerHTML = `<div class="flex justify-end"><div class="bg-zinc-800 text-zinc-100 px-4 py-3 rounded-2xl rounded-tr-sm shadow-md max-w-[85%] border border-zinc-700/50 text-sm md:text-base">${content}</div></div>`;
-            } else {
-                wrapper.innerHTML = `<div class="flex justify-start"><div class="bg-orange-600 text-white px-4 py-3 rounded-2xl rounded-tl-sm shadow-lg max-w-[90%] text-sm md:text-base relative group">${content}<div class="absolute -bottom-5 left-0 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-zinc-500 pt-1 pl-1">${currentPersonaName}</div></div></div>`;
-            }
-            cw.appendChild(wrapper);
-            cw.scrollTo({ top: cw.scrollHeight, behavior: 'smooth' });
-        }
+        // --- Standard Logic ---
 
         function toggleSidebar(forceState = null) {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            isSidebarOpen = forceState !== null ? forceState : !isSidebarOpen;
+            const isMobile = window.innerWidth < 768;
+            if (forceState !== null) isSidebarOpen = forceState;
+            else isSidebarOpen = !isSidebarOpen;
 
             if (isSidebarOpen) {
-                sidebar.classList.remove('-translate-x-full', 'md:-ml-80');
-                overlay.classList.remove('hidden');
-                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.remove('md:-ml-80');
+                if (isMobile) {
+                    sidebarOverlay.classList.remove('hidden');
+                    setTimeout(() => sidebarOverlay.classList.remove('opacity-0'), 10);
+                }
             } else {
                 sidebar.classList.add('-translate-x-full');
-                if (window.innerWidth >= 768) sidebar.classList.add('md:-ml-80');
-                overlay.classList.add('opacity-0');
-                setTimeout(() => overlay.classList.add('hidden'), 300);
+                if (!isMobile) sidebar.classList.add('md:-ml-80');
+                sidebarOverlay.classList.add('opacity-0');
+                setTimeout(() => sidebarOverlay.classList.add('hidden'), 300);
             }
         }
 
-        function toggleModal(id, show) {
-            const modal = document.getElementById(id);
+        function toggleModal(modalId, show) {
+            const modal = document.getElementById(modalId);
             if (show) {
-                // Pre-fill settings input if opening settings
-                if(id === 'settings-modal') {
-                    document.getElementById('api-key-input').value = serverApiKey || "";
-                }
+                if (modalId === 'settings-modal') apiKeyInput.value = userApiKey;
                 modal.classList.remove('hidden');
                 setTimeout(() => modal.classList.remove('opacity-0'), 10);
             } else {
@@ -1318,154 +1195,255 @@ Your personality:
             }
         }
 
+        function updateHeader(emoji, name) {
+            headerEmoji.textContent = emoji;
+            document.getElementById('persona-title').textContent = name;
+        }
+
+        async function selectPersona(persona) {
+            activePersonaId = persona.id;
+            currentPersonaName = persona.name;
+            currentSystemPrompt = persona.fullPrompt;
+            
+            renderPersonaList(searchInput.value);
+            
+            if (window.innerWidth < 768) toggleSidebar(false);
+
+            emptyState.classList.add('hidden');
+            chatWindow.innerHTML = '';
+            chatWindow.appendChild(emptyState);
+            
+            updateHeader(persona.emoji, currentPersonaName);
+
+            setLoading(true);
+            chatHistory = [];
+            const introPrompt = "Start a conversation with me. Introduce yourself in character, but do not state your name or that you are a persona. Be sharp.";
+            
+            await new Promise(r => setTimeout(r, 400));
+
+            const payload = {
+                contents: [{ parts: [{ text: introPrompt }] }],
+                systemInstruction: { parts: [{ text: currentSystemPrompt }] }
+            };
+
+            try {
+                const introMessage = await callGemini(payload);
+                chatHistory.push({ role: 'user', parts: [{ text: introPrompt }] });
+                chatHistory.push({ role: 'model', parts: [{ text: introMessage }] });
+                displayMessage(introMessage, 'model');
+            } catch (e) {
+                displayMessage("Check your connection or Special key.", 'model');
+            }
+            setLoading(false);
+        }
+
+        function displayMessage(text, sender) {
+            if (!emptyState.classList.contains('hidden')) emptyState.classList.add('hidden');
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'w-full message-animate mb-4 px-2';
+            let content = text.replace(/\n/g, '<br>');
+
+            if (sender === 'user') {
+                wrapper.innerHTML = `
+                    <div class="flex justify-end">
+                        <div class="bg-zinc-800 text-zinc-100 px-4 py-3 rounded-2xl rounded-tr-sm shadow-md max-w-[85%] border border-zinc-700/50 text-sm md:text-base leading-relaxed">
+                            ${content}
+                        </div>
+                    </div>`;
+            } else {
+                wrapper.innerHTML = `
+                    <div class="flex justify-start">
+                        <div class="bg-orange-600 text-white px-4 py-3 rounded-2xl rounded-tl-sm shadow-lg max-w-[90%] text-sm md:text-base leading-relaxed relative group">
+                            ${content}
+                            <div class="absolute -bottom-5 left-0 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-zinc-500 pt-1 pl-1">${currentPersonaName}</div>
+                        </div>
+                    </div>`;
+            }
+            chatWindow.appendChild(wrapper);
+            requestAnimationFrame(() => chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' }));
+        }
+
         function setLoading(loading) {
             isLoading = loading;
-            const ind = document.getElementById('loading');
-            const inp = document.getElementById('chat-input');
-            const btn = document.getElementById('send-btn');
-            
             if (loading) {
-                ind.classList.remove('hidden');
-                inp.disabled = true;
-                btn.disabled = true;
-                btn.classList.add('opacity-50', 'grayscale');
+                loadingIndicator.classList.remove('hidden');
+                chatInput.disabled = true;
+                sendBtn.disabled = true;
+                sendBtn.classList.add('opacity-50', 'grayscale');
             } else {
-                ind.classList.add('hidden');
-                inp.disabled = false;
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'grayscale');
-                if (window.innerWidth > 768) inp.focus();
+                loadingIndicator.classList.add('hidden');
+                chatInput.disabled = false;
+                sendBtn.disabled = false;
+                sendBtn.classList.remove('opacity-50', 'grayscale');
+                if (window.innerWidth > 768) chatInput.focus(); 
             }
         }
 
-        async function callGemini(contents, systemPrompt) {
-            if (!serverApiKey) {
-                toggleModal('settings-modal', true);
-                throw new Error("Please save your Gemini API Key in Settings.");
-            }
+        async function callGemini(payload, maxRetries = 1) {
+            const keyToUse = userApiKey || "";
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${keyToUse}`;
             
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${serverApiKey}`;
-            
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: contents,
-                    systemInstruction: { parts: [{ text: systemPrompt }] }
-                })
-            });
+            for (let i = 0; i <= maxRetries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-            if (!response.ok) {
-                if (response.status === 403) throw new Error("Invalid API Key");
-                throw new Error(`API Error (${response.status})`);
+                    if (!response.ok) {
+                        if (response.status === 403 || response.status === 400) {
+                            errorBanner.classList.remove('hidden');
+                            toggleModal('settings-modal', true);
+                            throw new Error("Auth failed");
+                        }
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    errorBanner.classList.add('hidden');
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "...";
+                } catch (err) {
+                    console.error(err);
+                    if (i === maxRetries) throw err;
+                    await new Promise(r => setTimeout(r, 1000));
+                }
             }
-            
-            const data = await response.json();
-            return data.candidates?.[0]?.content?.parts?.[0]?.text || "...";
         }
 
-        // --- EVENT LISTENERS ---
-
-        document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
-
+        // --- Event Listeners ---
+        
         document.getElementById('menu-btn').addEventListener('click', () => toggleSidebar());
         document.getElementById('close-sidebar-btn').addEventListener('click', () => toggleSidebar(false));
-        document.getElementById('sidebar-overlay').addEventListener('click', () => toggleSidebar(false));
-        
-        document.getElementById('persona-search').addEventListener('input', (e) => renderPersonaList(e.target.value));
-        
-        document.getElementById('open-settings-btn').addEventListener('click', () => toggleModal('settings-modal', true));
+        sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+        searchInput.addEventListener('input', (e) => renderPersonaList(e.target.value));
 
-        document.getElementById('save-key-btn').addEventListener('click', async () => {
-            const val = document.getElementById('api-key-input').value.trim();
+        let lastWidth = window.innerWidth;
+        window.addEventListener('resize', () => {
+            const currentWidth = window.innerWidth;
+            if (currentWidth === lastWidth) return;
+            if (currentWidth >= 768 && lastWidth < 768) toggleSidebar(true);
+            else if (currentWidth < 768 && lastWidth >= 768) toggleSidebar(false);
+            lastWidth = currentWidth;
+        });
+
+        document.getElementById('random-persona-btn').addEventListener('click', () => {
+            const random = personas[Math.floor(Math.random() * personas.length)];
+            selectPersona(random);
+        });
+
+        document.getElementById('open-settings-btn').addEventListener('click', () => toggleModal('settings-modal', true));
+        document.getElementById('close-settings-btn').addEventListener('click', () => toggleModal('settings-modal', false));
+        document.getElementById('save-key-btn').addEventListener('click', () => {
+            const val = apiKeyInput.value.trim();
             if (val) {
-                const btn = document.getElementById('save-key-btn');
-                const ogText = btn.innerText;
-                btn.innerText = "Saving...";
-                await saveApiKeyToProfile(val);
-                btn.innerText = "Saved!";
-                setTimeout(() => {
-                    btn.innerText = ogText;
-                    toggleModal('settings-modal', false);
-                }, 1000);
+                userApiKey = val;
+                localStorage.setItem('gemini_api_key', val);
+                toggleModal('settings-modal', false);
+                errorBanner.classList.add('hidden');
             }
         });
 
         document.getElementById('open-create-btn').addEventListener('click', () => {
-            if (window.innerWidth < 768) toggleSidebar(false);
+            newNameInput.value = '';
+            newDescInput.value = '';
+            newPromptInput.value = '';
+            editPersonaIdInput.value = '';
+            modalTitle.textContent = "Create Character";
+            savePersonaBtn.textContent = "Create Persona";
+            if(window.innerWidth < 768) toggleSidebar(false);
             toggleModal('create-modal', true);
         });
         document.getElementById('close-create-btn').addEventListener('click', () => toggleModal('create-modal', false));
+        
+        document.getElementById('save-persona-btn').addEventListener('click', () => {
+            const name = newNameInput.value.trim();
+            const desc = newDescInput.value.trim();
+            const prompt = newPromptInput.value.trim();
+            const editingId = editPersonaIdInput.value;
 
-        document.getElementById('save-persona-btn').addEventListener('click', async () => {
-            const name = document.getElementById('new-persona-name').value;
-            const desc = document.getElementById('new-persona-desc').value;
-            const prompt = document.getElementById('new-persona-prompt').value;
-            
-            if (!name || !prompt) return alert("Name and Prompt required");
-
-            const btn = document.getElementById('save-persona-btn');
-            btn.innerText = "Creating...";
-
-            const emoji = findEmoji(prompt) || '👤';
-            
-            // Save to Supabase
-            const { data, error } = await supabase
-                .from('custom_personas')
-                .insert([{ 
-                    name, 
-                    description: desc || "User Persona", 
-                    system_prompt: prompt, 
-                    emoji,
-                    user_id: currentUser.id 
-                }])
-                .select();
-
-            if (error) {
-                alert("Error saving: " + error.message);
-            } else {
-                await loadAllPersonas();
-                renderPersonaList();
-                toggleModal('create-modal', false);
-                if (data && data[0]) selectPersona({
-                    ...data[0], 
-                    fullPrompt: `You are '${data[0].name}'. ${data[0].system_prompt}`,
-                    isCustom: true
-                });
+            if (!name || !prompt) {
+                alert("Please enter at least a Name and Instructions.");
+                return;
             }
-            btn.innerText = "Save to Cloud";
-        });
 
-        document.getElementById('random-persona-btn').addEventListener('click', () => {
-            if (personas.length > 0) {
-                const random = personas[Math.floor(Math.random() * personas.length)];
-                selectPersona(random);
+            let customList = getCustomPersonas();
+            
+            // Try to find emoji in prompt
+            const emoji = findEmoji(prompt) || '👤';
+
+            if (editingId) {
+                const index = customList.findIndex(p => p.id === editingId);
+                if (index !== -1) {
+                    customList[index] = {
+                        ...customList[index],
+                        name,
+                        description: desc || "Custom User Persona",
+                        fullPrompt: `You are '${name}'. ${prompt}`,
+                        instructions: prompt,
+                        emoji: emoji // Update emoji if they changed instructions
+                    };
+                }
+            } else {
+                const newPersona = {
+                    id: `cust_${Date.now()}`,
+                    name,
+                    description: desc || "Custom User Persona",
+                    fullPrompt: `You are '${name}'. ${prompt}`,
+                    instructions: prompt,
+                    isCustom: true,
+                    emoji: emoji
+                };
+                customList.unshift(newPersona);
+            }
+
+            saveCustomPersonasToStorage(customList);
+            loadAllPersonas(); 
+            renderPersonaList();
+            toggleModal('create-modal', false);
+            
+            if (editingId && activePersonaId === editingId) {
+                const updated = personas.find(p => p.id === editingId);
+                selectPersona(updated);
+            } else if (!editingId) {
+                 selectPersona(personas.find(p => p.isCustom));
             }
         });
 
         document.getElementById('chat-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const inp = document.getElementById('chat-input');
-            const text = inp.value.trim();
+            const text = chatInput.value.trim();
             if (!text || isLoading) return;
             
-            inp.value = '';
+            if (!currentSystemPrompt) {
+                toggleSidebar(true);
+                return;
+            }
+
+            chatInput.value = '';
             displayMessage(text, 'user');
             chatHistory.push({ role: 'user', parts: [{ text }] });
             
             setLoading(true);
+            const payload = {
+                contents: chatHistory,
+                systemInstruction: { parts: [{ text: currentSystemPrompt }] }
+            };
+
             try {
-                const res = await callGemini(chatHistory, currentSystemPrompt);
-                chatHistory.push({ role: 'model', parts: [{ text: res }] });
-                displayMessage(res, 'model');
+                const response = await callGemini(payload);
+                chatHistory.push({ role: 'model', parts: [{ text: response }] });
+                displayMessage(response, 'model');
             } catch (e) {
-                displayMessage(`(${e.message})`, 'model');
+                displayMessage("(Connection Error. Check Special Key.)", 'model');
             }
             setLoading(false);
         });
 
-        // Initial Render State
-        document.getElementById('chat-window').innerHTML = EMPTY_STATE_HTML;
+        // Init
+        loadAllPersonas();
+        renderPersonaList();
         if (window.innerWidth >= 768) toggleSidebar(true);
         else toggleSidebar(false);
 
