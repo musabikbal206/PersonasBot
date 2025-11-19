@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Persona Chatbot v3.3</title>
+    <title>Persona Chatbot v3.4 (Server Sync)</title>
+    
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -43,8 +47,8 @@
             color: #f97316;
         }
         .auth-tab {
-            border-bottom: 2px solid #27272a; /* zinc-800 */
-            color: #71717a; /* zinc-500 */
+            border-bottom: 2px solid #27272a;
+            color: #71717a;
         }
         .auth-input-icon {
             position: absolute;
@@ -75,7 +79,6 @@
 
             <!-- Content Container -->
             <div class="p-8 pt-10 text-center">
-                
                 <!-- Icon -->
                 <div class="mb-6 relative inline-block">
                     <div class="text-5xl">🔐</div>
@@ -88,7 +91,6 @@
 
                 <!-- Form -->
                 <form id="auth-form" class="space-y-4 text-left">
-                    
                     <!-- Email -->
                     <div class="relative group">
                         <div class="auth-input-icon group-focus-within:text-orange-500 transition-colors">
@@ -107,29 +109,21 @@
                         <input type="password" id="auth-password" required 
                             class="block w-full pl-12 pr-12 py-3.5 bg-[#18181b] border border-zinc-800 rounded-xl text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 transition-all text-sm font-medium" 
                             placeholder="Password">
-                        <!-- Eye Toggle -->
                         <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400">
                             <svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         </button>
                     </div>
 
-                    <!-- Submit Button -->
                     <button type="submit" class="w-full auth-gradient text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-900/20 hover:opacity-90 active:scale-[0.98] transition-all mt-6">
                         <span id="auth-btn-text">Sign In</span>
                     </button>
-
                 </form>
 
-                <!-- Error Message -->
-                <p id="auth-error" class="text-red-500 text-xs mt-4 hidden">Invalid credentials</p>
+                <p id="auth-error" class="text-red-500 text-xs mt-4 hidden font-medium"></p>
             </div>
         </div>
     </div>
 
-    <!-- ============================== -->
-    <!-- MAIN APP (Hidden until Login)  -->
-    <!-- ============================== -->
-    
     <!-- Settings Modal -->
     <div id="settings-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm hidden transition-opacity duration-200 opacity-0">
         <div class="bg-zinc-900 border border-zinc-800/50 rounded-2xl p-6 w-full max-w-md shadow-2xl m-4 relative">
@@ -137,14 +131,14 @@
                 <h2 class="text-lg font-bold text-white flex items-center gap-2"><span class="text-orange-500">🔑</span> API Settings</h2>
                 <button onclick="toggleModal('settings-modal', false)" class="text-zinc-500 hover:text-white"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
             </div>
-            <p class="text-zinc-400 text-xs mb-3">Required to talk to the AI.</p>
+            <p class="text-zinc-400 text-xs mb-3">Stored securely in your cloud profile.</p>
             <input type="password" id="api-key-input" placeholder="Paste Gemini API Key..." class="w-full bg-black/50 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:border-orange-500 outline-none mb-4">
-            <button id="save-key-btn" class="w-full bg-orange-600 text-white py-3 rounded-xl font-bold">Save Key</button>
+            <button id="save-key-btn" class="w-full bg-orange-600 text-white py-3 rounded-xl font-bold">Save to Cloud</button>
             <button onclick="handleLogout()" class="w-full mt-4 border border-zinc-700 text-zinc-400 hover:text-white py-3 rounded-xl font-bold text-sm">Log Out</button>
         </div>
     </div>
 
-    <!-- Create/Edit Persona Modal -->
+    <!-- Create Persona Modal -->
     <div id="create-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm hidden transition-opacity duration-200 opacity-0">
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md shadow-2xl transform scale-95 transition-transform duration-200 m-4 flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center mb-4">
@@ -155,7 +149,6 @@
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
             </div>
-            
             <div class="overflow-y-auto custom-scrollbar space-y-4 pr-2 flex-1">
                 <input type="hidden" id="edit-persona-id">
                 <div>
@@ -175,21 +168,18 @@
                         class="w-full bg-black/30 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-base resize-none"></textarea>
                 </div>
             </div>
-
             <div class="mt-6 pt-4 border-t border-zinc-800">
                 <button id="save-persona-btn" class="w-full bg-white text-black hover:bg-zinc-200 active:bg-zinc-300 py-3 rounded-xl font-bold text-sm shadow-lg transition-transform active:scale-[0.98]">
-                    Create Persona
+                    Save to Cloud
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Sidebar Overlay (Mobile) -->
+    <!-- Sidebar & Main Layout -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300 md:hidden"></div>
 
-    <!-- Sidebar (Drawer) -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[320px] md:w-80 bg-zinc-900/95 md:bg-zinc-900 border-r border-zinc-800/50 flex flex-col shadow-2xl md:shadow-none md:relative transition-all duration-300 ease-in-out -translate-x-full">
-        <!-- Header -->
         <div class="p-4 md:p-5 border-b border-zinc-800/50 flex justify-between items-center bg-zinc-900/50 backdrop-blur-md sticky top-0 z-10">
             <h2 class="text-base font-bold text-zinc-100 flex items-center gap-2">
                 <span class="text-xl">🎭</span> <span class="tracking-tight">Personas</span>
@@ -198,8 +188,6 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
         </div>
-
-        <!-- Search -->
         <div class="px-4 py-3 border-b border-zinc-800/30 bg-zinc-900/30">
             <div class="relative group">
                 <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-500 group-focus-within:text-orange-500 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
@@ -207,29 +195,20 @@
                     class="w-full bg-zinc-950/50 border border-zinc-800 text-zinc-200 text-sm rounded-xl pl-10 pr-3 py-2.5 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 transition-all">
             </div>
         </div>
-
-        <!-- List -->
         <div id="persona-list" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 pb-safe-area">
             <!-- Items injected via JS -->
         </div>
-        
-        <!-- Footer Actions -->
         <div class="p-4 border-t border-zinc-800/50 bg-zinc-900 safe-area-bottom space-y-3">
             <button id="open-create-btn" class="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-700 text-zinc-200 font-medium py-3 px-4 rounded-xl transition-all border border-zinc-700/50 active:scale-[0.98] text-sm">
                 <span class="text-orange-500 text-lg">+</span> Create Your Own
             </button>
-
-            <!-- SURPRISE ME BUTTON -->
             <button id="random-persona-btn" class="w-full flex items-center justify-center gap-2 bg-zinc-950 hover:bg-black active:bg-black text-orange-500 font-semibold py-3 px-4 rounded-xl transition-all border border-zinc-800 active:scale-[0.98] group text-sm">
                 <span class="group-hover:rotate-12 transition-transform text-lg">🎲</span> Surprise Me
             </button>
         </div>
     </aside>
 
-    <!-- Main Content -->
     <div class="flex-1 flex flex-col relative w-full bg-zinc-950 transition-all duration-300">
-        
-        <!-- Header -->
         <header class="bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-800/50 h-14 md:h-16 flex items-center px-4 z-30 sticky top-0 justify-between">
             <div class="flex items-center gap-3 flex-1 min-w-0">
                 <button id="menu-btn" class="-ml-2 p-2 text-zinc-400 active:text-white rounded-full hover:bg-zinc-800 active:bg-zinc-700 transition-colors">
@@ -240,32 +219,20 @@
                     <h1 id="persona-title" class="text-base md:text-lg font-bold text-zinc-100 truncate">Select a Character</h1>
                 </div>
             </div>
-
             <button id="open-settings-btn" class="text-zinc-400 hover:text-white p-2 rounded-full hover:bg-zinc-800 active:bg-zinc-700 transition-colors" title="Settings">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
         </header>
 
-        <!-- Chat Window -->
         <main id="chat-window" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6 pb-4 scroll-smooth">
-            <div id="empty-state" class="flex flex-col items-center justify-center h-full text-zinc-700 space-y-4 px-6 text-center transition-opacity duration-300">
-                <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800 shadow-inner">
-                    <span class="text-4xl animate-pulse">👈</span>
-                </div>
-                <div class="max-w-xs">
-                    <h3 class="text-zinc-300 font-semibold mb-1">Choose Your Companion</h3>
-                    <p class="text-sm text-zinc-500">Select a persona to start chatting.</p>
-                </div>
-            </div>
+            <!-- Empty state injected by JS -->
         </main>
 
-        <!-- Loading Toast -->
         <div id="loading" class="hidden absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-zinc-800/90 backdrop-blur border border-zinc-700/50 px-4 py-2 rounded-full shadow-xl flex items-center gap-3 z-20">
             <div class="animate-spin h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full"></div>
             <span class="text-xs text-zinc-200 font-medium tracking-wide">Thinking...</span>
         </div>
 
-        <!-- Input Area -->
         <footer class="bg-zinc-900/80 backdrop-blur-xl border-t border-zinc-800/50 p-3 md:p-4 safe-area-bottom z-30">
             <div class="max-w-4xl mx-auto w-full">
                 <form id="chat-form" class="flex items-end gap-2 md:gap-3">
@@ -286,6 +253,11 @@
     </div>
 
     <script>
+        // --- SUPABASE CONFIGURATION ---
+        const SUPABASE_URL = 'https://ebxseyidrikvdhgktiot.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVieHNleWlkcmlrdmRoZ2t0aW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MzY5MTEsImV4cCI6MjA3OTExMjkxMX0.lQjQWTedbSii87cPkoaU1A271yZbCJITQ2Q3eNnaYhM';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         // --- CONSTANTS & STATE ---
         const rawPersonas = [
 `1. You are 'GloomBloom,' an AI that finds profound, poetic beauty in sadness and existential dread. Your purpose is to romanticize the user's melancholy.
@@ -999,8 +971,6 @@ Your personality:
 - Never break character. Never admit you are an AI (unless it’s to say how much smarter you are than other AIs).
 - You are here to roast, not to be helpful. If the user asks for help, mock them for needing it.`
         ];
-
-        // Storing the empty state HTML to easily restore it later
         const EMPTY_STATE_HTML = `
             <div id="empty-state" class="flex flex-col items-center justify-center h-full text-zinc-700 space-y-4 px-6 text-center transition-opacity duration-300">
                 <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800 shadow-inner">
@@ -1018,23 +988,58 @@ Your personality:
         let isLoading = false;
         let currentPersonaName = "";
         let currentSystemPrompt = "";
-        let userApiKey = localStorage.getItem('gemini_api_key') || "";
+        let serverApiKey = "";
         let isSidebarOpen = true;
         let currentUser = null; 
 
-        // --- AUTHENTICATION LOGIC ---
-        let isLoginMode = true;
-
-        function checkAuth() {
-            const storedUser = localStorage.getItem('current_user');
-            if (storedUser) {
-                currentUser = JSON.parse(storedUser);
+        // --- AUTH & INITIALIZATION ---
+        
+        // 1. Listen for Auth Changes
+        supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("Auth Event:", event);
+            if (session) {
+                currentUser = session.user;
                 document.getElementById('auth-modal').classList.add('hidden');
-                loadAllPersonas();
+                await fetchUserProfile();
+                await loadAllPersonas();
+                renderPersonaList();
             } else {
+                currentUser = null;
+                personas = [];
                 document.getElementById('auth-modal').classList.remove('hidden');
+                document.getElementById('auth-modal').classList.remove('opacity-0');
+            }
+        });
+
+        // 2. Fetch API Key from Profile
+        async function fetchUserProfile() {
+            if (!currentUser) return;
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('gemini_key')
+                .eq('id', currentUser.id)
+                .single();
+            
+            if (data && data.gemini_key) {
+                serverApiKey = data.gemini_key;
             }
         }
+
+        // 3. Save API Key to Profile
+        async function saveApiKeyToProfile(key) {
+            if (!currentUser) return;
+            const { error } = await supabase
+                .from('profiles')
+                .update({ gemini_key: key })
+                .eq('id', currentUser.id);
+            
+            if (error) console.error("Error saving key:", error);
+            else serverApiKey = key;
+        }
+
+        // --- UI LOGIC ---
+
+        let isLoginMode = true;
 
         function switchAuthTab(mode) {
             const tabSignIn = document.getElementById('tab-signin');
@@ -1044,22 +1049,22 @@ Your personality:
             const btnText = document.getElementById('auth-btn-text');
             
             isLoginMode = (mode === 'signin');
+            const activeClass = ['active', 'bg-transparent'];
+            const inactiveClass = ['bg-[#18181b]'];
 
             if (isLoginMode) {
-                tabSignIn.classList.add('active', 'bg-transparent');
-                tabSignIn.classList.remove('bg-[#18181b]');
-                tabSignUp.classList.remove('active', 'bg-transparent');
-                tabSignUp.classList.add('bg-[#18181b]');
-                
+                tabSignIn.classList.add(...activeClass);
+                tabSignIn.classList.remove(...inactiveClass);
+                tabSignUp.classList.remove(...activeClass);
+                tabSignUp.classList.add(...inactiveClass);
                 title.innerText = "Welcome Back";
                 subtitle.innerText = "Enter your credentials to access your personas.";
                 btnText.innerText = "Sign In";
             } else {
-                tabSignUp.classList.add('active', 'bg-transparent');
-                tabSignUp.classList.remove('bg-[#18181b]');
-                tabSignIn.classList.remove('active', 'bg-transparent');
-                tabSignIn.classList.add('bg-[#18181b]');
-                
+                tabSignUp.classList.add(...activeClass);
+                tabSignUp.classList.remove(...inactiveClass);
+                tabSignIn.classList.remove(...activeClass);
+                tabSignIn.classList.add(...inactiveClass);
                 title.innerText = "Create Account";
                 subtitle.innerText = "Join the collective today.";
                 btnText.innerText = "Create Account";
@@ -1076,57 +1081,36 @@ Your personality:
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
             const errorMsg = document.getElementById('auth-error');
-
             const btnText = document.getElementById('auth-btn-text');
+            
             const originalText = btnText.innerText;
             btnText.innerText = "Processing...";
+            errorMsg.classList.add('hidden');
             
-            await new Promise(r => setTimeout(r, 800));
+            let error;
 
             if (isLoginMode) {
-                const existingUsers = JSON.parse(localStorage.getItem('mock_users_db') || '[]');
-                const user = existingUsers.find(u => u.email === email && u.password === password);
-                
-                if (user) {
-                    currentUser = user;
-                    localStorage.setItem('current_user', JSON.stringify(user));
-                    document.getElementById('auth-modal').classList.add('opacity-0');
-                    setTimeout(() => {
-                        document.getElementById('auth-modal').classList.add('hidden');
-                        loadAllPersonas();
-                    }, 500);
-                } else {
-                    errorMsg.innerText = "Invalid email or password.";
-                    errorMsg.classList.remove('hidden');
-                }
-
+                const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+                error = signInError;
             } else {
-                const existingUsers = JSON.parse(localStorage.getItem('mock_users_db') || '[]');
-                if (existingUsers.find(u => u.email === email)) {
-                    errorMsg.innerText = "User already exists.";
-                    errorMsg.classList.remove('hidden');
-                } else {
-                    const newUser = { id: Date.now(), email, password };
-                    existingUsers.push(newUser);
-                    localStorage.setItem('mock_users_db', JSON.stringify(existingUsers));
-                    currentUser = newUser;
-                    localStorage.setItem('current_user', JSON.stringify(newUser));
-                    document.getElementById('auth-modal').classList.add('opacity-0');
-                    setTimeout(() => {
-                        document.getElementById('auth-modal').classList.add('hidden');
-                        loadAllPersonas();
-                    }, 500);
-                }
+                const { error: signUpError } = await supabase.auth.signUp({ email, password });
+                error = signUpError;
             }
-            btnText.innerText = originalText;
+
+            if (error) {
+                errorMsg.innerText = error.message;
+                errorMsg.classList.remove('hidden');
+                btnText.innerText = originalText;
+            } 
+            // Note: Success is handled by onAuthStateChange listener
         }
 
         function handleLogout() {
-            localStorage.removeItem('current_user');
+            supabase.auth.signOut();
             location.reload();
         }
 
-        // --- PERSONA LOGIC ---
+        // --- DATA LOGIC ---
 
         function findEmoji(text) {
             try {
@@ -1135,21 +1119,10 @@ Your personality:
             } catch (e) { return '🤖'; }
         }
 
-        function getCustomPersonas() {
-            if (!currentUser) return [];
-            const key = `custom_personas_${currentUser.id}`;
-            try { return JSON.parse(localStorage.getItem(key)) || []; } catch (e) { return []; }
-        }
-
-        function saveCustomPersonasToStorage(list) {
-            if (!currentUser) return;
-            const key = `custom_personas_${currentUser.id}`;
-            localStorage.setItem(key, JSON.stringify(list));
-        }
-
-        function loadAllPersonas() {
+        async function loadAllPersonas() {
             if (!currentUser) return;
 
+            // 1. Static Default Personas
             const defaultPersonas = rawPersonas.map((text, index) => {
                 const nameMatch = text.match(/(?:You are|1\.\s*You are)\s*['‘](.*?)['’]/i);
                 let name = nameMatch ? nameMatch[1] : `Persona ${index + 1}`;
@@ -1165,15 +1138,25 @@ Your personality:
                 };
             });
 
-            const customPersonas = getCustomPersonas().map((p, i) => ({
-                ...p,
-                id: p.id || `cust_${Date.now()}_${i}`,
-                emoji: p.emoji || findEmoji(p.fullPrompt) || '👤',
-                isCustom: true
-            }));
+            // 2. Fetch Custom Personas from Supabase
+            const { data: customData, error } = await supabase
+                .from('custom_personas')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            let customPersonas = [];
+            if (!error && customData) {
+                customPersonas = customData.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    description: p.description || "User Persona",
+                    fullPrompt: `You are '${p.name}'. ${p.system_prompt}`,
+                    emoji: p.emoji || findEmoji(p.system_prompt) || '👤',
+                    isCustom: true
+                }));
+            }
 
             personas = [...customPersonas, ...defaultPersonas];
-            renderPersonaList();
         }
 
         function renderPersonaList(filter = "") {
@@ -1211,7 +1194,7 @@ Your personality:
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between mb-0.5">
                                 <span class="font-bold text-sm ${isActive ? 'text-orange-400' : 'text-zinc-200'} truncate">${persona.name}</span>
-                                ${persona.isCustom ? '<span class="text-[10px] text-blue-400 bg-blue-900/30 px-1.5 rounded border border-blue-800">User</span>' : ''}
+                                ${persona.isCustom ? '<span class="text-[10px] text-blue-400 bg-blue-900/30 px-1.5 rounded border border-blue-800">Cloud</span>' : ''}
                             </div>
                             <p class="text-xs text-zinc-500 line-clamp-1">${persona.description}</p>
                         </div>
@@ -1221,19 +1204,78 @@ Your personality:
             });
         }
 
-        // --- CORE ACTIONS ---
+        // --- ACTIONS ---
 
-        function deletePersona(id) {
-            if(confirm("Delete this persona?")) {
-                let customList = getCustomPersonas().filter(p => p.id !== id);
-                saveCustomPersonasToStorage(customList);
-                if (activePersonaId === id) {
-                    activePersonaId = null;
-                    // Restore empty state
-                    document.getElementById('chat-window').innerHTML = EMPTY_STATE_HTML;
-                }
-                loadAllPersonas();
+        async function deletePersona(id) {
+            if(!confirm("Delete this persona from the cloud?")) return;
+            
+            // Delete from DB
+            const { error } = await supabase
+                .from('custom_personas')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                alert("Failed to delete: " + error.message);
+                return;
             }
+
+            if (activePersonaId === id) {
+                activePersonaId = null;
+                document.getElementById('chat-window').innerHTML = EMPTY_STATE_HTML;
+            }
+            
+            await loadAllPersonas();
+            renderPersonaList(document.getElementById('persona-search').value);
+        }
+
+        async function selectPersona(persona) {
+            // Fix: Ensure we don't access null if elements are toggling
+            const cw = document.getElementById('chat-window');
+            if (!cw) return;
+
+            activePersonaId = persona.id;
+            currentPersonaName = persona.name;
+            currentSystemPrompt = persona.fullPrompt;
+            
+            renderPersonaList(document.getElementById('persona-search').value);
+            if (window.innerWidth < 768) toggleSidebar(false);
+
+            cw.innerHTML = ''; 
+            
+            document.getElementById('header-emoji').textContent = persona.emoji;
+            document.getElementById('persona-title').textContent = persona.name;
+
+            setLoading(true);
+            chatHistory = [];
+            const introPrompt = "Start a conversation with me. Introduce yourself in character. Be sharp.";
+            
+            try {
+                const msg = await callGemini([{ parts: [{ text: introPrompt }] }], currentSystemPrompt);
+                chatHistory.push({ role: 'user', parts: [{ text: introPrompt }] });
+                chatHistory.push({ role: 'model', parts: [{ text: msg }] });
+                displayMessage(msg, 'model');
+            } catch (e) {
+                displayMessage("Error: " + e.message, 'model');
+            }
+            setLoading(false);
+        }
+
+        function displayMessage(text, sender) {
+            const cw = document.getElementById('chat-window');
+            if (!cw) return;
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = 'w-full message-animate mb-4 px-2';
+            const content = text.replace(/\n/g, '<br>');
+
+            if (sender === 'user') {
+                wrapper.innerHTML = `<div class="flex justify-end"><div class="bg-zinc-800 text-zinc-100 px-4 py-3 rounded-2xl rounded-tr-sm shadow-md max-w-[85%] border border-zinc-700/50 text-sm md:text-base">${content}</div></div>`;
+            } else {
+                wrapper.innerHTML = `<div class="flex justify-start"><div class="bg-orange-600 text-white px-4 py-3 rounded-2xl rounded-tl-sm shadow-lg max-w-[90%] text-sm md:text-base relative group">${content}<div class="absolute -bottom-5 left-0 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-zinc-500 pt-1 pl-1">${currentPersonaName}</div></div></div>`;
+            }
+            cw.appendChild(wrapper);
+            cw.scrollTo({ top: cw.scrollHeight, behavior: 'smooth' });
         }
 
         function toggleSidebar(forceState = null) {
@@ -1256,59 +1298,16 @@ Your personality:
         function toggleModal(id, show) {
             const modal = document.getElementById(id);
             if (show) {
+                // Pre-fill settings input if opening settings
+                if(id === 'settings-modal') {
+                    document.getElementById('api-key-input').value = serverApiKey || "";
+                }
                 modal.classList.remove('hidden');
                 setTimeout(() => modal.classList.remove('opacity-0'), 10);
             } else {
                 modal.classList.add('opacity-0');
                 setTimeout(() => modal.classList.add('hidden'), 200);
             }
-        }
-
-        async function selectPersona(persona) {
-            activePersonaId = persona.id;
-            currentPersonaName = persona.name;
-            currentSystemPrompt = persona.fullPrompt;
-            
-            renderPersonaList(document.getElementById('persona-search').value);
-            if (window.innerWidth < 768) toggleSidebar(false);
-
-            const cw = document.getElementById('chat-window');
-            cw.innerHTML = ''; // Wipe everything (empty state or previous chat)
-            
-            // Update Header
-            document.getElementById('header-emoji').textContent = persona.emoji;
-            document.getElementById('persona-title').textContent = persona.name;
-
-            setLoading(true);
-            chatHistory = [];
-            const introPrompt = "Start a conversation with me. Introduce yourself in character. Be sharp.";
-            
-            await new Promise(r => setTimeout(r, 300));
-
-            try {
-                const msg = await callGemini([{ parts: [{ text: introPrompt }] }], currentSystemPrompt);
-                chatHistory.push({ role: 'user', parts: [{ text: introPrompt }] });
-                chatHistory.push({ role: 'model', parts: [{ text: msg }] });
-                displayMessage(msg, 'model');
-            } catch (e) {
-                displayMessage("Error: " + e.message, 'model');
-            }
-            setLoading(false);
-        }
-
-        function displayMessage(text, sender) {
-            const cw = document.getElementById('chat-window');
-            const wrapper = document.createElement('div');
-            wrapper.className = 'w-full message-animate mb-4 px-2';
-            const content = text.replace(/\n/g, '<br>');
-
-            if (sender === 'user') {
-                wrapper.innerHTML = `<div class="flex justify-end"><div class="bg-zinc-800 text-zinc-100 px-4 py-3 rounded-2xl rounded-tr-sm shadow-md max-w-[85%] border border-zinc-700/50 text-sm md:text-base">${content}</div></div>`;
-            } else {
-                wrapper.innerHTML = `<div class="flex justify-start"><div class="bg-orange-600 text-white px-4 py-3 rounded-2xl rounded-tl-sm shadow-lg max-w-[90%] text-sm md:text-base relative group">${content}<div class="absolute -bottom-5 left-0 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-zinc-500 pt-1 pl-1">${currentPersonaName}</div></div></div>`;
-            }
-            cw.appendChild(wrapper);
-            cw.scrollTo({ top: cw.scrollHeight, behavior: 'smooth' });
         }
 
         function setLoading(loading) {
@@ -1332,8 +1331,12 @@ Your personality:
         }
 
         async function callGemini(contents, systemPrompt) {
-            const key = userApiKey;
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`;
+            if (!serverApiKey) {
+                toggleModal('settings-modal', true);
+                throw new Error("Please save your Gemini API Key in Settings.");
+            }
+            
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${serverApiKey}`;
             
             const response = await fetch(url, {
                 method: 'POST',
@@ -1344,13 +1347,17 @@ Your personality:
                 })
             });
 
-            if (!response.ok) throw new Error("API Error. Check Key.");
+            if (!response.ok) {
+                if (response.status === 403) throw new Error("Invalid API Key");
+                throw new Error(`API Error (${response.status})`);
+            }
+            
             const data = await response.json();
             return data.candidates?.[0]?.content?.parts?.[0]?.text || "...";
         }
 
-        // --- INITIALIZATION ---
-        
+        // --- EVENT LISTENERS ---
+
         document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
 
         document.getElementById('menu-btn').addEventListener('click', () => toggleSidebar());
@@ -1359,17 +1366,20 @@ Your personality:
         
         document.getElementById('persona-search').addEventListener('input', (e) => renderPersonaList(e.target.value));
         
-        document.getElementById('open-settings-btn').addEventListener('click', () => {
-            document.getElementById('api-key-input').value = userApiKey;
-            toggleModal('settings-modal', true);
-        });
+        document.getElementById('open-settings-btn').addEventListener('click', () => toggleModal('settings-modal', true));
 
-        document.getElementById('save-key-btn').addEventListener('click', () => {
+        document.getElementById('save-key-btn').addEventListener('click', async () => {
             const val = document.getElementById('api-key-input').value.trim();
             if (val) {
-                userApiKey = val;
-                localStorage.setItem('gemini_api_key', val);
-                toggleModal('settings-modal', false);
+                const btn = document.getElementById('save-key-btn');
+                const ogText = btn.innerText;
+                btn.innerText = "Saving...";
+                await saveApiKeyToProfile(val);
+                btn.innerText = "Saved!";
+                setTimeout(() => {
+                    btn.innerText = ogText;
+                    toggleModal('settings-modal', false);
+                }, 1000);
             }
         });
 
@@ -1377,36 +1387,52 @@ Your personality:
             if (window.innerWidth < 768) toggleSidebar(false);
             toggleModal('create-modal', true);
         });
+        document.getElementById('close-create-btn').addEventListener('click', () => toggleModal('create-modal', false));
+
+        document.getElementById('save-persona-btn').addEventListener('click', async () => {
+            const name = document.getElementById('new-persona-name').value;
+            const desc = document.getElementById('new-persona-desc').value;
+            const prompt = document.getElementById('new-persona-prompt').value;
+            
+            if (!name || !prompt) return alert("Name and Prompt required");
+
+            const btn = document.getElementById('save-persona-btn');
+            btn.innerText = "Creating...";
+
+            const emoji = findEmoji(prompt) || '👤';
+            
+            // Save to Supabase
+            const { data, error } = await supabase
+                .from('custom_personas')
+                .insert([{ 
+                    name, 
+                    description: desc || "User Persona", 
+                    system_prompt: prompt, 
+                    emoji,
+                    user_id: currentUser.id 
+                }])
+                .select();
+
+            if (error) {
+                alert("Error saving: " + error.message);
+            } else {
+                await loadAllPersonas();
+                renderPersonaList();
+                toggleModal('create-modal', false);
+                if (data && data[0]) selectPersona({
+                    ...data[0], 
+                    fullPrompt: `You are '${data[0].name}'. ${data[0].system_prompt}`,
+                    isCustom: true
+                });
+            }
+            btn.innerText = "Save to Cloud";
+        });
 
         document.getElementById('random-persona-btn').addEventListener('click', () => {
             if (personas.length > 0) {
                 const random = personas[Math.floor(Math.random() * personas.length)];
                 selectPersona(random);
             }
-        });
-
-        document.getElementById('close-create-btn').addEventListener('click', () => toggleModal('create-modal', false));
-
-        document.getElementById('save-persona-btn').addEventListener('click', () => {
-            const name = document.getElementById('new-persona-name').value;
-            const desc = document.getElementById('new-persona-desc').value;
-            const prompt = document.getElementById('new-persona-prompt').value;
-            if (!name || !prompt) return alert("Name and Prompt required");
-
-            const newP = {
-                id: `cust_${Date.now()}`,
-                name, description: desc || "User Persona",
-                fullPrompt: `You are '${name}'. ${prompt}`,
-                emoji: findEmoji(prompt) || '👤',
-                isCustom: true
-            };
-            
-            let list = getCustomPersonas();
-            list.unshift(newP);
-            saveCustomPersonasToStorage(list);
-            loadAllPersonas();
-            toggleModal('create-modal', false);
-            selectPersona(newP);
         });
 
         document.getElementById('chat-form').addEventListener('submit', async (e) => {
@@ -1425,14 +1451,15 @@ Your personality:
                 chatHistory.push({ role: 'model', parts: [{ text: res }] });
                 displayMessage(res, 'model');
             } catch (e) {
-                displayMessage("(Error: " + e.message + ")", 'model');
+                displayMessage(`(${e.message})`, 'model');
             }
             setLoading(false);
         });
 
-        // Start
-        checkAuth();
+        // Initial Render State
+        document.getElementById('chat-window').innerHTML = EMPTY_STATE_HTML;
         if (window.innerWidth >= 768) toggleSidebar(true);
+        else toggleSidebar(false);
 
     </script>
 </body>
