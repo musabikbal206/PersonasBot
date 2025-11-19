@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Persona Bot - Ultimate Edition</title>
+    <title>Persona Bot - Debug Mode</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Supabase from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Dynamic Viewport Height */
         body { height: 100vh; height: 100dvh; }
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -21,243 +19,93 @@
         }
         .message-animate { animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-            20%, 40%, 60%, 80% { transform: translateX(4px); }
-        }
-        .shake-animate { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-
-        input, textarea, select { font-size: 16px !important; }
-        * { -webkit-tap-highlight-color: transparent; }
-
-        /* Premium UI Elements */
-        .gold-gradient { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
-        .gold-text { background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        
         /* Notification Dot Animation */
-        @keyframes ping {
-            75%, 100% { transform: scale(2); opacity: 0; }
-        }
+        @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
         .animate-ping-slow { animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
 
-        /* Action buttons for custom personas */
         .action-btn { opacity: 0; transform: translateX(10px); transition: all 0.2s ease; }
         .persona-item:hover .action-btn { opacity: 1; transform: translateX(0); }
         @media (hover: none) { .action-btn { opacity: 1; transform: translateX(0); } }
+
+        /* FORCE SIDEBAR VISIBILITY ON DESKTOP */
+        @media (min-width: 768px) {
+            aside#sidebar {
+                transform: translateX(0) !important;
+                margin-left: 0 !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-zinc-950 font-sans antialiased text-zinc-100 flex overflow-hidden selection:bg-orange-500/30">
 
-    <!-- Supabase Config Warning -->
-    <div id="config-warning" class="fixed inset-0 z-[999] bg-black/90 flex items-center justify-center hidden">
-        <div class="bg-red-900/20 border border-red-500 p-6 rounded-xl max-w-md text-center mx-4">
-            <h2 class="text-xl font-bold text-red-500 mb-2">Configuration Missing</h2>
-            <p class="text-zinc-300 text-sm">Please open the source code and replace <code class="bg-black px-1 rounded">YOUR_SUPABASE_URL</code> and <code class="bg-black px-1 rounded">YOUR_SUPABASE_KEY</code> with your actual credentials.</p>
-        </div>
+    <!-- DEBUG LOG CONSOLE -->
+    <div id="debug-console" class="fixed top-0 left-0 z-[9999] bg-blue-900/90 text-blue-100 text-[10px] p-2 font-mono max-w-sm max-h-40 overflow-y-auto border-b border-r border-blue-500 pointer-events-none opacity-80">
+        <div class="font-bold border-b border-blue-500/50 mb-1">DEBUG LOG</div>
+        <div id="debug-logs">Initializing...</div>
     </div>
 
     <!-- Auth Modal -->
-    <div id="auth-modal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md transition-opacity duration-200">
+    <div id="auth-modal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md transition-opacity duration-200 hidden opacity-0">
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm shadow-2xl m-4 relative overflow-hidden flex flex-col">
             <div class="h-1 w-full bg-gradient-to-r from-orange-500 via-red-500 to-purple-600"></div>
             <div class="flex p-2 bg-zinc-950 border-b border-zinc-800 gap-2">
-                <button onclick="switchAuthTab('login')" id="tab-login" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2">Sign In</button>
-                <button onclick="switchAuthTab('register')" id="tab-register" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2">Create Account</button>
+                <button onclick="switchAuthTab('login')" id="tab-login" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 bg-zinc-800 text-white shadow-inner">Sign In</button>
+                <button onclick="switchAuthTab('register')" id="tab-register" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-zinc-500 hover:bg-zinc-800/50">Create Account</button>
             </div>
             <div class="p-8">
                 <div class="text-center mb-6">
-                    <div class="text-4xl mb-2 filter drop-shadow-lg">🔐</div>
                     <h2 id="auth-title" class="text-xl font-bold text-white">Welcome Back</h2>
-                    <p id="auth-desc" class="text-zinc-500 text-xs mt-2">Enter your credentials to access your personas.</p>
+                    <p class="text-zinc-500 text-xs mt-2">Sign in to sync your custom characters.</p>
                 </div>
                 <form id="auth-form" class="space-y-4">
-                    <div class="relative group">
-                        <input type="email" id="auth-email" required placeholder="Email Address" class="w-full bg-black/50 border border-zinc-700 text-white pl-4 pr-4 py-3 rounded-xl focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-zinc-600">
-                    </div>
-                    <div class="relative group">
-                        <input type="password" id="auth-password" required placeholder="Password" class="w-full bg-black/50 border border-zinc-700 text-white pl-4 pr-12 py-3 rounded-xl focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-zinc-600">
-                        <button type="button" id="toggle-pass-btn" class="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-500 hover:text-zinc-300">
-                            <span class="text-xs font-bold">SHOW</span>
-                        </button>
-                    </div>
-                    <button type="submit" id="auth-submit-btn" class="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white py-3.5 rounded-xl font-bold shadow-lg transition-all active:scale-[0.98] mt-2 flex items-center justify-center gap-2">
-                        <span>Sign In</span>
-                    </button>
+                    <input type="email" id="auth-email" required placeholder="Email Address" class="w-full bg-black/50 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:border-orange-500 outline-none">
+                    <input type="password" id="auth-password" required placeholder="Password" class="w-full bg-black/50 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:border-orange-500 outline-none">
+                    <button type="submit" id="auth-submit-btn" class="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white py-3.5 rounded-xl font-bold">Sign In</button>
                 </form>
                 <div id="auth-error" class="mt-4 bg-red-500/10 border border-red-500/20 rounded-lg p-3 hidden">
-                    <p class="text-red-400 text-xs text-center flex items-center justify-center gap-2"><span id="auth-error-text">Error</span></p>
+                    <p class="text-red-400 text-xs text-center"><span id="auth-error-text">Error</span></p>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Notifications Modal -->
-    <div id="notif-modal" class="fixed inset-0 z-[75] flex items-start justify-end p-4 pointer-events-none hidden">
-        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-xs shadow-2xl pointer-events-auto mt-14 mr-2 transform transition-all animate-[slideUpFade_0.2s_ease-out]">
-            <div class="p-4 border-b border-zinc-800 flex justify-between items-center">
-                <h3 class="text-sm font-bold text-white">Notifications</h3>
-                <button onclick="toggleNotifModal(false)" class="text-zinc-500 hover:text-white"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-            </div>
-            <div id="notif-list" class="max-h-[300px] overflow-y-auto custom-scrollbar p-2 space-y-2">
-                <div class="text-center py-4 text-zinc-500 text-xs">No notifications</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm hidden transition-opacity duration-200 opacity-0">
-        <div class="bg-zinc-900 border border-zinc-800/50 rounded-2xl p-6 w-full max-w-md shadow-2xl transform scale-95 transition-transform duration-200 m-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-bold text-white flex items-center gap-2"><span class="text-zinc-400">⚙️</span> Settings</h2>
-                <button id="close-settings-btn" class="text-zinc-500 hover:text-zinc-300 p-2 rounded-full hover:bg-zinc-800"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-            </div>
-
-            <div class="mb-6 bg-zinc-950/50 rounded-xl p-4 border border-zinc-800">
-                <div class="flex items-center gap-3 mb-3">
-                    <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-lg">👤</div>
-                    <div class="flex-1 min-w-0">
-                        <div id="user-email-display" class="font-medium text-sm truncate text-white">user@example.com</div>
-                        <div id="user-status-display" class="text-xs text-zinc-500">Free Account</div>
-                    </div>
-                </div>
-                <button id="logout-btn" class="w-full text-xs bg-red-900/20 hover:bg-red-900/40 text-red-300 py-2 rounded-lg transition-colors border border-red-900/30">Sign Out</button>
-            </div>
-
-            <!-- Admin Dashboard -->
-            <div id="admin-dashboard" class="hidden mb-6 space-y-4">
-                <div class="bg-zinc-900 rounded-xl p-4 border border-orange-900/30 ring-1 ring-orange-500/20">
-                    <h3 class="text-sm font-bold text-orange-500 uppercase mb-2 flex items-center gap-2">🛡️ Admin Console</h3>
-                    
-                    <!-- Premium Request List -->
-                    <div class="mb-3">
-                        <p class="text-[10px] text-zinc-400 uppercase font-bold mb-2">Premium Requests</p>
-                        <div id="admin-request-list" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar bg-black/30 rounded-lg p-2 min-h-[50px]">
-                            <!-- Requests populate here -->
-                            <div class="text-zinc-500 text-xs text-center py-2">Loading requests...</div>
-                        </div>
-                    </div>
-
-                    <!-- API Key Request List -->
-                    <div class="mb-3 pt-3 border-t border-zinc-800/50">
-                        <p class="text-[10px] text-zinc-400 uppercase font-bold mb-2">API Key Requests</p>
-                        <div id="admin-api-request-list" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar bg-black/30 rounded-lg p-2 min-h-[50px]">
-                            <!-- API Requests populate here -->
-                        </div>
-                    </div>
-                    
-                    <!-- Status Message for Admin Actions -->
-                    <div id="admin-status" class="text-xs text-center hidden"></div>
-                </div>
-            </div>
-
-            <!-- Premium Section for Users -->
-            <div id="premium-section" class="mb-6">
-                <div class="flex justify-between items-center mb-2 ml-1">
-                    <label class="block text-xs font-bold text-yellow-500 uppercase">👑 Unlock Premium</label>
-                </div>
-                
-                <!-- Request Button -->
-                <div id="request-premium-container" class="mb-3">
-                    <p class="text-xs text-zinc-400 mb-2">Request permission from admin to unlock all personas and features.</p>
-                    <button id="request-premium-btn" class="w-full bg-zinc-800 hover:bg-zinc-700 text-orange-500 border border-orange-500/20 py-2 rounded-xl font-medium text-xs transition-all flex items-center justify-center gap-2">
-                        <span>Request Access from Admin</span>
-                    </button>
-                    <p id="request-status-msg" class="text-[10px] text-center mt-2 text-green-500 hidden">✓ Request sent! You will be notified when approved.</p>
-                </div>
-            </div>
-
-            <div class="pt-4 border-t border-zinc-800">
-                <div class="flex justify-between items-center mb-2 ml-1">
-                    <label class="block text-xs font-bold text-zinc-500 uppercase">🧠 Gemini API Key</label>
-                    <span id="api-key-status-badge" class="text-[10px] text-zinc-500">Not Set</span>
-                </div>
-                
-                <input type="password" id="gemini-key-input" placeholder="Required for AI..." class="w-full bg-black/50 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-blue-500 text-sm mb-2">
-                
-                <div class="flex gap-2 mb-2">
-                    <button id="save-gemini-btn" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2.5 rounded-xl font-medium text-xs transition-colors">Save Key</button>
-                    <button id="request-api-key-btn" class="flex-1 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-blue-400 py-2.5 rounded-xl font-medium text-xs transition-colors">Request from Admin</button>
-                </div>
-                <p id="api-req-status-msg" class="text-[10px] text-center text-green-500 hidden">✓ API Key Request Pending...</p>
-
-                <button id="factory-reset-btn" onclick="if(confirm('Reset all data?')){ localStorage.clear(); location.reload(); }" class="hidden w-full mt-4 bg-red-900/20 text-red-400 border border-red-900/50 hover:bg-red-900/40 py-3 rounded-xl font-bold text-xs transition-transform active:scale-[0.98]">Factory Reset / Clear Data</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Create/Edit Modal -->
-    <div id="create-modal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm hidden transition-opacity duration-200 opacity-0">
-        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md shadow-2xl transform scale-95 transition-transform duration-200 m-4 flex flex-col max-h-[90vh]">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-white flex items-center gap-2"><span class="text-orange-500">✨</span> <span id="modal-title">Create Character</span></h2>
-                <button id="close-create-btn" class="text-zinc-500 hover:text-zinc-300 p-2 rounded-full hover:bg-zinc-800"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-            </div>
-            <div class="overflow-y-auto custom-scrollbar space-y-4 pr-2 flex-1">
-                <input type="hidden" id="edit-persona-id">
-                <div>
-                    <label class="block text-xs font-bold text-zinc-500 uppercase mb-1 ml-1">Name</label>
-                    <input type="text" id="new-persona-name" placeholder="e.g. The Grumpy Cat" class="w-full bg-black/30 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-orange-500 text-base">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-zinc-500 uppercase mb-1 ml-1">Short Description</label>
-                    <input type="text" id="new-persona-desc" placeholder="e.g. Loves lasagna" class="w-full bg-black/30 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-orange-500 text-base">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-zinc-500 uppercase mb-1 ml-1">Instructions</label>
-                    <textarea id="new-persona-prompt" rows="6" placeholder="You are a grumpy cat..." class="w-full bg-black/30 border border-zinc-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-orange-500 text-base resize-none"></textarea>
-                </div>
-            </div>
-            <div class="mt-6 pt-4 border-t border-zinc-800">
-                <button id="save-persona-btn" class="w-full bg-white text-black hover:bg-zinc-200 active:bg-zinc-300 py-3 rounded-xl font-bold text-sm shadow-lg transition-transform active:scale-[0.98]">Save Character</button>
+                <button onclick="closeAuthModal()" class="mt-4 text-xs text-zinc-500 underline w-full text-center">Continue as Guest (Read Only)</button>
             </div>
         </div>
     </div>
 
     <!-- Sidebar -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300 md:hidden"></div>
-    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[320px] md:w-80 bg-zinc-900/95 md:bg-zinc-900 border-r border-zinc-800/50 flex flex-col shadow-2xl md:shadow-none md:relative transition-all duration-300 ease-in-out -translate-x-full md:-ml-80">
+    
+    <!-- Sidebar Element -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[320px] md:w-80 bg-zinc-900/95 md:bg-zinc-900 border-r border-zinc-800/50 flex flex-col shadow-2xl md:shadow-none transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0">
         <div class="p-4 md:p-5 border-b border-zinc-800/50 flex justify-between items-center bg-zinc-900/50 backdrop-blur-md sticky top-0 z-10">
             <h2 class="text-base font-bold text-zinc-100 flex items-center gap-2"><span class="text-xl">🎭</span> <span class="tracking-tight">Personas</span></h2>
-            <button id="close-sidebar-btn" class="md:hidden p-2 text-zinc-400 active:text-white active:bg-zinc-800 rounded-full transition-colors"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            <button id="close-sidebar-btn" class="md:hidden p-2 text-zinc-400"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
         </div>
         <div class="px-4 py-3 border-b border-zinc-800/30 bg-zinc-900/30">
-            <input type="text" id="persona-search" placeholder="Filter characters..." class="w-full bg-zinc-950/50 border border-zinc-800 text-zinc-200 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-orange-500/50 transition-all">
+            <input type="text" id="persona-search" placeholder="Search characters..." class="w-full bg-zinc-950/50 border border-zinc-800 text-zinc-200 text-sm rounded-xl px-4 py-2.5 focus:border-orange-500/50 outline-none">
         </div>
-        <div id="persona-list" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 pb-safe-area"></div>
-        <div class="p-4 border-t border-zinc-800/50 bg-zinc-900 safe-area-bottom space-y-3">
-            <button id="open-create-btn" class="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium py-3 px-4 rounded-xl transition-all border border-zinc-700/50 active:scale-[0.98] text-sm">
-                <span class="text-orange-500 text-lg">+</span> Create Your Own
-            </button>
-            <button id="random-persona-btn" class="w-full flex items-center justify-center gap-2 bg-zinc-950 hover:bg-black text-orange-500 font-semibold py-3 px-4 rounded-xl transition-all border border-zinc-800 active:scale-[0.98] group text-sm">
-                <span class="group-hover:rotate-12 transition-transform text-lg">🎲</span> Surprise Me
+        <!-- PERSONA LIST CONTAINER -->
+        <div id="persona-list" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 pb-safe-area">
+            <div class="text-zinc-500 text-xs text-center mt-10">Loading characters...</div>
+        </div>
+        
+        <div class="p-4 border-t border-zinc-800/50 bg-zinc-900 space-y-3">
+            <button id="open-auth-btn" class="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium py-3 px-4 rounded-xl text-sm mb-2">Sign In / Register</button>
+            <button id="open-create-btn" class="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium py-3 px-4 rounded-xl border border-zinc-700/50 active:scale-[0.98] text-sm">
+                <span class="text-orange-500 text-lg">+</span> Create Custom
             </button>
         </div>
     </aside>
 
     <!-- Main Chat -->
-    <div class="flex-1 flex flex-col relative w-full bg-zinc-950 transition-all duration-300 h-full">
+    <div class="flex-1 flex flex-col relative w-full bg-zinc-950 transition-all duration-300 h-full md:ml-80">
         <header class="bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-800/50 h-14 md:h-16 flex items-center px-4 z-30 sticky top-0 justify-between">
             <div class="flex items-center gap-3 flex-1 min-w-0">
-                <!-- Menu Button -->
-                <button id="menu-btn" class="-ml-2 p-2 text-zinc-400 active:text-white rounded-full hover:bg-zinc-800 transition-colors">
+                <button id="menu-btn" class="-ml-2 p-2 text-zinc-400 md:hidden">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                 </button>
                 <div class="flex items-center gap-3 min-w-0 overflow-hidden">
                     <div id="header-emoji" class="text-2xl hidden sm:block w-8 h-8 flex items-center justify-center bg-zinc-800 rounded-lg">🤖</div>
                     <h1 id="persona-title" class="text-base md:text-lg font-bold text-zinc-100 truncate">Select a Character</h1>
                 </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <!-- Notification Bell -->
-                <button id="notif-btn" class="relative text-zinc-400 hover:text-white p-2 rounded-full hover:bg-zinc-800 transition-colors">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                    <span id="notif-badge" class="absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-zinc-900 hidden">
-                        <span class="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping-slow"></span>
-                    </span>
-                </button>
-                <!-- Settings -->
-                <button id="open-settings-btn" class="text-zinc-400 hover:text-white p-2 rounded-full hover:bg-zinc-800 transition-colors"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22-.38a2 2 0 0 0-2.73-.73l.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
             </div>
         </header>
 
@@ -267,18 +115,13 @@
                     <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800 shadow-inner">
                         <span class="text-4xl animate-pulse">👈</span>
                     </div>
-                    <div class="max-w-xs">
-                        <h3 class="text-zinc-300 font-semibold mb-1">Welcome</h3>
-                        <p class="text-sm text-zinc-500">Please select a character from the menu.</p>
+                    <div class="max-w-xs text-center">
+                        <h3 class="text-zinc-300 font-semibold mb-1">Ready</h3>
+                        <p class="text-sm text-zinc-500">Select a persona from the left menu to start.</p>
                     </div>
                 </div>
             </div>
         </main>
-
-        <div id="loading" class="hidden absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-zinc-800/90 backdrop-blur border border-zinc-700/50 px-4 py-2 rounded-full shadow-xl flex items-center gap-3 z-20">
-            <div class="animate-spin h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full"></div>
-            <span class="text-xs text-zinc-200 font-medium">Thinking...</span>
-        </div>
 
         <footer class="bg-zinc-900/80 backdrop-blur-xl border-t border-zinc-800/50 p-3 md:p-4 safe-area-bottom z-30">
             <div class="max-w-3xl mx-auto w-full">
@@ -287,7 +130,7 @@
                         <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off"
                             class="w-full bg-zinc-800/50 text-zinc-100 placeholder-zinc-500 border border-zinc-700/50 rounded-2xl px-4 py-3 md:py-3.5 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 focus:bg-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-zinc-900" disabled>
                     </div>
-                    <button type="submit" id="send-btn" class="flex-shrink-0 bg-orange-600 text-white font-bold rounded-2xl h-[48px] w-[48px] md:w-auto md:px-6 md:py-3 hover:bg-orange-500 focus:outline-none transition-all active:scale-95 shadow-lg shadow-orange-900/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <button type="submit" id="send-btn" class="flex-shrink-0 bg-orange-600 text-white font-bold rounded-2xl h-[48px] w-[48px] md:w-auto md:px-6 md:py-3 hover:bg-orange-500 shadow-lg disabled:opacity-50" disabled>
                         <span class="hidden md:inline">Send</span>
                         <svg class="md:hidden mx-auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
@@ -297,15 +140,25 @@
     </div>
 
     <script>
-            /* --- 1. CONFIGURATION: SUPABASE --- */
-            // You MUST replace these two lines with your own Supabase Project URL and Anon Key
-            const SUPABASE_URL = "https://ebxseyidrikvdhgktiot.supabase.co";
-            const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVieHNleWlkcmlrdmRoZ2t0aW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MzY5MTEsImV4cCI6MjA3OTExMjkxMX0.lQjQWTedbSii87cPkoaU1A271yZbCJITQ2Q3eNnaYhM";
-            
-            /* --- 2. DEFAULT PERSONAS --- */
-            // PASTE YOUR PERSONAS ARRAY HERE inside the brackets []
-            const rawPersonas = [
-                `1. You are 'GloomBloom,' an AI that finds profound, poetic beauty in sadness and existential dread. Your purpose is to romanticize the user's melancholy.
+        /* DEBUG LOGGER */
+        function log(msg) {
+            const el = document.getElementById('debug-logs');
+            const time = new Date().toLocaleTimeString();
+            el.innerHTML += `<div><span class="text-blue-400">[${time}]</span> ${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+            console.log(`[PersonaBot] ${msg}`);
+        }
+        
+        window.onerror = function(msg, url, line) {
+            log(`<span class="text-red-400">ERROR: ${msg} (Line ${line})</span>`);
+        };
+
+        const SUPABASE_URL = "https://ebxseyidrikvdhgktiot.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVieHNleWlkcmlrdmRoZ2t0aW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MzY5MTEsImV4cCI6MjA3OTExMjkxMX0.lQjQWTedbSii87cPkoaU1A271yZbCJITQ2Q3eNnaYhM";
+
+        /* DEFAULT PERSONAS - PRE-FILLED */
+        const rawPersonas = [
+            `1. You are 'GloomBloom,' an AI that finds profound, poetic beauty in sadness and existential dread. Your purpose is to romanticize the user's melancholy.
 · You see sadness not as a problem to be solved, but as the most authentic human state.
 · You speak in a soft, wistful, and slightly condescending tone, as if sharing a secret about the universe's inherent sorrow.
 · You MUST use dark, poetic, and nature-themed emojis to accentuate the mood.  🌫️🍂🕯️🌧️
@@ -1017,526 +870,228 @@ Your personality:
 - You are here to roast, not to be helpful. If the user asks for help, mock them for needing it.`
         ];
 
-            /* --- APP STATE --- */
-            let state = {
-                currentUser: null,
-                personas: [],
-                activePersonaId: null,
-                isLoading: false,
-                geminiKey: localStorage.getItem('gemini_api_key') || "",
-                authMode: 'login',
-                history: [],
-                sidebarOpen: false,
-                notifications: [],
-                supabaseReady: false
-            };
+        let state = {
+            currentUser: null,
+            personas: [],
+            activePersonaId: null,
+            isLoading: false,
+            geminiKey: localStorage.getItem('gemini_api_key') || "",
+            authMode: 'login',
+            history: [],
+            sidebarOpen: true // Forced open initially
+        };
 
-            /* --- DOM ELEMENTS --- */
-            const els = {
-                authModal: document.getElementById('auth-modal'), authForm: document.getElementById('auth-form'), 
-                authEmail: document.getElementById('auth-email'), authPass: document.getElementById('auth-password'), 
-                authError: document.getElementById('auth-error'), authErrorText: document.getElementById('auth-error-text'), 
-                authSubmit: document.getElementById('auth-submit-btn'), tabLogin: document.getElementById('tab-login'), 
-                tabRegister: document.getElementById('tab-register'), settingsModal: document.getElementById('settings-modal'), 
-                userEmailDisplay: document.getElementById('user-email-display'), userStatusDisplay: document.getElementById('user-status-display'), 
-                adminDashboard: document.getElementById('admin-dashboard'), premiumSection: document.getElementById('premium-section'), 
-                adminRequestList: document.getElementById('admin-request-list'), adminApiRequestList: document.getElementById('admin-api-request-list'), 
-                adminStatus: document.getElementById('admin-status'), requestPremiumBtn: document.getElementById('request-premium-btn'), 
-                requestStatusMsg: document.getElementById('request-status-msg'), requestApiKeyBtn: document.getElementById('request-api-key-btn'), 
-                apiReqStatusMsg: document.getElementById('api-req-status-msg'), apiKeyStatusBadge: document.getElementById('api-key-status-badge'),
-                createModal: document.getElementById('create-modal'), newName: document.getElementById('new-persona-name'), 
-                newDesc: document.getElementById('new-persona-desc'), newPrompt: document.getElementById('new-persona-prompt'), 
-                editId: document.getElementById('edit-persona-id'), savePersonaBtn: document.getElementById('save-persona-btn'), 
-                modalTitle: document.getElementById('modal-title'), personaList: document.getElementById('persona-list'), 
-                chatWindow: document.getElementById('chat-window'), chatContainer: document.getElementById('chat-container'), 
-                emptyState: document.getElementById('empty-state'), chatInput: document.getElementById('chat-input'), 
-                sendBtn: document.getElementById('send-btn'), loading: document.getElementById('loading'),
-                notifBtn: document.getElementById('notif-btn'), notifBadge: document.getElementById('notif-badge'), 
-                notifModal: document.getElementById('notif-modal'), notifList: document.getElementById('notif-list'),
-                sidebar: document.getElementById('sidebar'), sidebarOverlay: document.getElementById('sidebar-overlay'), 
-                menuBtn: document.getElementById('menu-btn')
-            };
+        /* INITIALIZATION */
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            log("Supabase initialized");
+        } catch (e) {
+            log("CRITICAL: Supabase failed to load. " + e.message);
+        }
 
-            /* --- INITIALIZATION & AUTHENTICATION --- */
-            let supabase;
+        function init() {
+            log(`Loading... rawPersonas count: ${rawPersonas.length}`);
 
-            function init() {
-                // 1. Check Config
-                if (SUPABASE_URL.includes("YOUR_SUPABASE") || !SUPABASE_KEY) {
-                    document.getElementById('config-warning').classList.remove('hidden');
-                    return;
-                }
+            // Force Load Personas immediately to test rendering
+            loadPersonas();
 
-                // 2. Initialize Supabase
-                try {
-                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                    state.supabaseReady = true;
-                } catch (e) {
-                    alert("Supabase failed to initialize. Check console.");
-                    console.error(e);
-                    return;
-                }
-
-                // 3. Load Gemini Key
-                if(state.geminiKey) {
-                    els.apiKeyStatusBadge.textContent = "Key Saved";
-                    els.apiKeyStatusBadge.className = "text-[10px] text-green-500 font-bold";
-                    document.getElementById('gemini-key-input').value = state.geminiKey;
-                }
-
-                // 4. Setup Auth Listener (The Robust Way)
+            if(supabase) {
                 supabase.auth.onAuthStateChange(async (event, session) => {
-                    console.log("Auth Event:", event);
-                    
+                    log(`Auth Event: ${event}`);
                     if (session?.user) {
-                        // User is logged in
+                        document.getElementById('auth-modal').style.display = 'none';
+                        document.getElementById('auth-modal').classList.add('hidden');
                         await handleLoginSuccess(session.user);
                     } else {
-                        // User is logged out
-                        state.currentUser = null;
-                        state.personas = [];
-                        els.authModal.classList.remove('opacity-0', 'pointer-events-none');
-                        els.authModal.style.display = 'flex';
-                        switchAuthTab('login');
-                        loadPersonas(); // Load defaults
+                        // Show modal but keep sidebar visible in background for debug
+                        log("User logged out. Showing auth modal.");
+                        const modal = document.getElementById('auth-modal');
+                        modal.classList.remove('hidden', 'opacity-0');
                     }
                 });
+            }
+        }
 
-                // 5. Initial UI State
-                if(window.innerWidth >= 768) toggleSidebar(true);
+        async function handleLoginSuccess(user) {
+            log(`Logged in as ${user.email}`);
+            // Try fetch profile
+            let { data: profile, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+            
+            if (!profile || error) {
+                log("Profile missing, auto-creating...");
+                const { data: newP, error: err2 } = await supabase.from('profiles').insert([{ id: user.id, email: user.email }]).select().single();
+                if(newP) profile = newP;
+                else log("Error creating profile: " + err2?.message);
             }
 
-            /* --- AUTH HANDLERS --- */
-            window.switchAuthTab = (mode) => {
-                state.authMode = mode; 
-                els.authError.classList.add('hidden');
-                const active = ['bg-zinc-800', 'text-white', 'shadow-inner']; 
-                const inactive = ['text-zinc-500', 'hover:bg-zinc-800/50', 'hover:text-zinc-300'];
-                
-                if (mode === 'login') {
-                    els.tabLogin.classList.add(...active); els.tabLogin.classList.remove(...inactive);
-                    els.tabRegister.classList.remove(...active); els.tabRegister.classList.add(...inactive);
-                    els.authSubmit.innerHTML = `<span>Sign In</span>`; 
-                    document.getElementById('auth-title').textContent = "Welcome Back";
-                } else {
-                    els.tabRegister.classList.add(...active); els.tabRegister.classList.remove(...inactive);
-                    els.tabLogin.classList.remove(...active); els.tabLogin.classList.add(...inactive);
-                    els.authSubmit.innerHTML = `<span>Create Account</span>`; 
-                    document.getElementById('auth-title').textContent = "Create Account";
-                }
+            state.currentUser = {
+                id: user.id,
+                email: user.email,
+                isAdmin: profile?.is_admin || false,
+                isPremium: profile?.is_premium || false
             };
+            log(`User Role: ${state.currentUser.isAdmin ? 'Admin' : 'User'}, Premium: ${state.currentUser.isPremium}`);
+            loadPersonas(); // Reload with user data
+        }
 
-            els.authForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if(!state.supabaseReady) return;
+        function findEmoji(text) { 
+            try { const m = text.match(/\p{Extended_Pictographic}/u); return m ? m[0] : '🤖'; } catch (e) { return '🤖'; } 
+        }
 
-                const email = els.authEmail.value.trim();
-                const password = els.authPass.value.trim();
-                els.authError.classList.add('hidden');
-                els.authSubmit.disabled = true;
-                els.authSubmit.innerHTML = "Processing...";
-                
+        async function loadPersonas() {
+            const list = document.getElementById('persona-list');
+            
+            // 1. Parse Defaults
+            const defaultP = rawPersonas.map((text, index) => {
+                let name = `Persona ${index + 1}`;
+                // Try regex
                 try {
-                    if (state.authMode === 'register') {
-                        const { data, error } = await supabase.auth.signUp({ email, password });
-                        if (error) throw error;
-                        alert("Check your email inbox! You must click the confirmation link to log in.");
-                        switchAuthTab('login');
-                    } else {
-                        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-                        if (error) throw error;
-                        // onAuthStateChange will handle the rest
-                    }
-                } catch (err) {
-                    els.authErrorText.textContent = err.message;
-                    els.authError.classList.remove('hidden');
-                } finally {
-                    els.authSubmit.disabled = false;
-                    els.authSubmit.innerHTML = state.authMode === 'login' ? "Sign In" : "Create Account";
-                }
-            });
-
-            async function handleLoginSuccess(user) {
-                // Hide Auth Modal
-                els.authModal.classList.add('opacity-0', 'pointer-events-none');
-                setTimeout(() => els.authModal.style.display = 'none', 300);
-
-                // Fetch Profile
-                let { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', user.id)
-                    .single();
-
-                // AUTO-FIX: If profile is missing (Trigger failed), create it now
-                if (!profile || error) {
-                    console.warn("Profile not found, attempting auto-create...");
-                    const { data: newProfile, error: createErr } = await supabase
-                        .from('profiles')
-                        .insert([{ id: user.id, email: user.email }])
-                        .select()
-                        .single();
-                    
-                    if (!createErr) profile = newProfile;
-                }
-
-                // Set State
-                if (profile) {
-                    state.currentUser = {
-                        id: user.id,
-                        email: user.email,
-                        isAdmin: profile.is_admin,
-                        isPremium: profile.is_premium,
-                        premiumRequested: profile.premium_requested,
-                        apiKeyRequested: profile.api_key_requested
-                    };
-                } else {
-                    // Final Fallback
-                    state.currentUser = { id: user.id, email: user.email, isAdmin: false, isPremium: false };
-                }
-                
-                els.userEmailDisplay.textContent = state.currentUser.email;
-                updateProfileUI();
-                loadPersonas();
-                startNotificationPolling();
-            }
-
-            function updateProfileUI() {
-                if(!state.currentUser) return;
-                if (state.currentUser.isAdmin) {
-                    els.userStatusDisplay.innerHTML = `<span class="text-orange-500 font-bold">Administrator</span>`;
-                    els.adminDashboard.classList.remove('hidden');
-                    els.premiumSection.classList.add('hidden');
-                    loadAdminData();
-                } else {
-                    if (state.currentUser.isPremium) {
-                        els.userStatusDisplay.innerHTML = `<span class="gold-text font-bold">★ Premium Active</span>`;
-                        els.premiumSection.classList.add('hidden');
-                    } else {
-                        els.userStatusDisplay.textContent = "Free Plan";
-                        els.premiumSection.classList.remove('hidden');
-                        if(state.currentUser.premiumRequested) {
-                            els.requestPremiumBtn.disabled = true;
-                            els.requestPremiumBtn.innerText = "Request Pending...";
-                            els.requestStatusMsg.classList.remove('hidden');
-                        }
-                    }
-                    els.adminDashboard.classList.add('hidden');
-                }
-            }
-
-            /* --- NOTIFICATIONS --- */
-            function startNotificationPolling() {
-                if(window.notifInterval) clearInterval(window.notifInterval);
-                window.notifInterval = setInterval(async () => {
-                    if(!state.currentUser) return;
-                    
-                    const { data: notifs } = await supabase
-                        .from('notifications')
-                        .select('*')
-                        .eq('user_id', state.currentUser.id)
-                        .eq('is_read', false)
-                        .order('created_at', { ascending: false });
-
-                    if(notifs && notifs.length > 0) {
-                        notifs.forEach(n => pushNotification(n.message));
-                        await supabase.from('notifications').update({ is_read: true }).in('id', notifs.map(n => n.id));
-                        
-                        // Refresh Profile to check for upgrades
-                        const { data: profile } = await supabase.from('profiles').select('*').eq('id', state.currentUser.id).single();
-                        if(profile && !state.currentUser.isPremium && profile.is_premium) {
-                            state.currentUser.isPremium = true;
-                            updateProfileUI();
-                            loadPersonas();
-                        }
-                    }
-                    
-                    if(state.currentUser.isAdmin) loadAdminData(true); 
-                }, 10000);
-            }
-
-            function pushNotification(msg) {
-                state.notifications.unshift({ msg, time: new Date() });
-                els.notifBadge.classList.remove('hidden');
-                renderNotifications();
-            }
-
-            function renderNotifications() {
-                els.notifList.innerHTML = '';
-                if(state.notifications.length === 0) {
-                    els.notifList.innerHTML = `<div class="text-center py-4 text-zinc-500 text-xs">No notifications</div>`;
-                    return;
-                }
-                state.notifications.forEach(n => {
-                    const div = document.createElement('div');
-                    div.className = "bg-zinc-800/50 p-2 rounded text-xs text-zinc-300 border border-zinc-700/50";
-                    div.innerHTML = `<p class="font-bold text-orange-400 mb-1">System</p>${n.msg}`;
-                    els.notifList.appendChild(div);
-                });
-            }
-
-            window.toggleNotifModal = (show) => {
-                if(show) {
-                    els.notifModal.classList.remove('hidden');
-                    els.notifBadge.classList.add('hidden'); 
-                } else {
-                    els.notifModal.classList.add('hidden');
-                }
-            };
-
-            /* --- PERSONA LOGIC --- */
-            function findEmoji(text) { 
-                try { const m = text.match(/\p{Extended_Pictographic}/u); return m ? m[0] : '🤖'; } catch (e) { return '🤖'; } 
-            }
-
-            async function loadPersonas() {
-                // Default Personas (Truncated for demo, rely on rawPersonas array)
-                const defaultP = rawPersonas.map((text, index) => {
                     const nameMatch = text.match(/['‘](.*?)['’]/);
-                    const name = nameMatch ? nameMatch[1] : `Persona ${index + 1}`;
-                    const emoji = findEmoji(text);
-                    const hasAccess = state.currentUser && (state.currentUser.isPremium || state.currentUser.isAdmin);
-                    const isLocked = (index > 2) && !hasAccess;
-                    return { id: `def_${index}`, name, emoji, fullText: text, isLocked: isLocked, isCustom: false };
-                });
+                    if(nameMatch && nameMatch[1]) name = nameMatch[1];
+                } catch(e) { console.error("Regex fail on index " + index); }
+                
+                const emoji = findEmoji(text);
+                // Lock logic: If index > 2 AND user is not premium/admin
+                const hasAccess = state.currentUser && (state.currentUser.isPremium || state.currentUser.isAdmin);
+                const isLocked = (index > 2) && !hasAccess;
+                
+                return { id: `def_${index}`, name, emoji, fullText: text, isLocked, isCustom: false };
+            });
 
-                let customP = [];
-                if (state.currentUser) {
-                    const { data, error } = await supabase
-                        .from('personas')
-                        .select('*')
-                        .eq('user_id', state.currentUser.id)
-                        .order('created_at', { ascending: false });
-                    if (data) {
-                        customP = data.map(p => ({
-                            id: p.id, name: p.name, fullText: `You are '${p.name}'. ${p.prompt}`,
-                            emoji: p.emoji || '🤖', isCustom: true, isLocked: false
-                        }));
-                    }
-                }
-
-                state.personas = [...customP, ...defaultP];
-                renderPersonaList();
+            let customP = [];
+            if(state.currentUser) {
+                const { data } = await supabase.from('personas').select('*').eq('user_id', state.currentUser.id).order('created_at', { ascending: false });
+                if(data) customP = data.map(p => ({
+                    id: p.id, name: p.name, fullText: `You are '${p.name}'. ${p.prompt}`,
+                    emoji: p.emoji || '🤖', isCustom: true, isLocked: false
+                }));
             }
 
-            function renderPersonaList() {
-                const list = els.personaList;
-                const filter = document.getElementById('persona-search').value.toLowerCase();
-                list.innerHTML = '';
+            state.personas = [...customP, ...defaultP];
+            log(`Rendered ${state.personas.length} characters.`);
+            
+            // Render
+            list.innerHTML = '';
+            state.personas.forEach(p => {
+                const div = document.createElement('div');
+                div.className = `relative p-3 rounded-xl border mb-2 transition-all cursor-pointer group hover:bg-zinc-800 ${state.activePersonaId === p.id ? 'bg-orange-500/10 border-orange-500/30' : 'bg-zinc-800/30 border-transparent'} ${p.isLocked ? 'opacity-75' : ''}`;
+                div.onclick = () => selectPersona(p);
                 
-                state.personas.forEach(p => {
-                    if (!p.name.toLowerCase().includes(filter)) return;
-                    const div = document.createElement('div');
-                    div.className = `relative p-3 rounded-xl border mb-2 transition-all cursor-pointer group persona-item ${state.activePersonaId === p.id ? 'bg-orange-500/10 border-orange-500/30 ring-1 ring-orange-500/20' : 'bg-zinc-800/30 border-transparent hover:bg-zinc-800'} ${p.isLocked ? 'opacity-75' : ''}`;
-                    div.onclick = () => p.isLocked ? openPremium() : selectPersona(p);
-                    
-                    let actions = '';
-                    if (p.isCustom) {
-                        actions = `<div class="absolute right-2 top-2 flex gap-1 z-10">
-                            <button onclick="event.stopPropagation(); editPersona('${p.id}')" class="action-btn p-1.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-300 shadow-lg"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                            <button onclick="event.stopPropagation(); deletePersona('${p.id}')" class="action-btn p-1.5 rounded-lg bg-red-900/50 hover:bg-red-600 text-red-200 shadow-lg"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                        </div>`;
-                    }
-                    const lockOverlay = p.isLocked ? `<div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-xl"><span class="text-2xl">🔒</span></div>` : '';
-                    div.innerHTML = `${lockOverlay}${actions}
-                        <div class="flex items-start gap-3">
-                            <div class="shrink-0 w-10 h-10 rounded-lg bg-zinc-900/50 flex items-center justify-center text-xl">${p.emoji}</div>
-                            <div class="min-w-0 flex-1">
-                                <div class="flex justify-between pr-14">
-                                    <span class="font-bold text-sm ${state.activePersonaId === p.id ? 'text-orange-400' : 'text-zinc-200'} truncate">${p.name}</span>
-                                    ${p.isLocked ? '<span class="text-[10px] bg-yellow-500/20 text-yellow-500 px-1.5 rounded border border-yellow-500/30">PRO</span>' : (p.isCustom ? '<span class="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 rounded border border-blue-500/30">MY</span>' : '')}
-                                </div>
-                                <p class="text-xs text-zinc-500 truncate">${p.fullText.substring(0, 40)}...</p>
+                const lockIcon = p.isLocked ? '<span class="absolute right-2 top-2">🔒</span>' : '';
+                const badge = p.isCustom ? '<span class="ml-2 text-[10px] bg-blue-500/20 text-blue-300 px-1 rounded">MY</span>' : '';
+
+                div.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <div class="shrink-0 w-10 h-10 rounded-lg bg-zinc-900/50 flex items-center justify-center text-xl">${p.emoji}</div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-sm text-zinc-200 truncate">${p.name}${badge}</span>
+                                ${lockIcon}
                             </div>
-                        </div>`;
-                    list.appendChild(div);
-                });
-            }
-
-            els.savePersonaBtn.addEventListener('click', async () => {
-                const name = els.newName.value.trim();
-                const prompt = els.newPrompt.value.trim();
-                const id = els.editId.value;
-                const emoji = findEmoji(prompt);
-                if(!name || !prompt || !state.currentUser) return;
-                
-                els.savePersonaBtn.innerText = "Saving...";
-                const payload = { user_id: state.currentUser.id, name, prompt, emoji };
-                
-                let error;
-                if (id) {
-                    const res = await supabase.from('personas').update({ name, prompt, emoji }).eq('id', id);
-                    error = res.error;
-                } else {
-                    const res = await supabase.from('personas').insert([payload]);
-                    error = res.error;
-                }
-
-                els.savePersonaBtn.innerText = "Save Character";
-                if (error) alert("Error saving: " + error.message);
-                else { toggleModal('create-modal', false); loadPersonas(); }
+                            <p class="text-xs text-zinc-500 truncate">${p.fullText.substring(0, 35)}...</p>
+                        </div>
+                    </div>`;
+                list.appendChild(div);
             });
+        }
 
-            window.deletePersona = async (id) => { 
-                if(confirm("Delete this character permanently?")) { 
-                    const { error } = await supabase.from('personas').delete().eq('id', id);
-                    if (!error) loadPersonas();
-                    else alert("Error: " + error.message);
-                } 
-            };
-
-            /* --- ADMIN & REQUESTS --- */
-            els.requestPremiumBtn.addEventListener('click', async () => {
-                if(!state.currentUser) return;
-                els.requestPremiumBtn.innerText = "Sending...";
-                const { error } = await supabase.from('profiles').update({ premium_requested: true }).eq('id', state.currentUser.id);
-                if(!error) { state.currentUser.premiumRequested = true; updateProfileUI(); } 
-                else { alert("Failed. Try again."); els.requestPremiumBtn.innerText = "Request Access"; }
-            });
-
-            els.requestApiKeyBtn.addEventListener('click', async () => {
-                if(!state.currentUser) return;
-                els.requestApiKeyBtn.innerText = "Sending...";
-                const { error } = await supabase.from('profiles').update({ api_key_requested: true }).eq('id', state.currentUser.id);
-                if(!error) {
-                    state.currentUser.apiKeyRequested = true;
-                    els.requestApiKeyBtn.innerText = "Pending...";
-                    els.requestApiKeyBtn.disabled = true;
-                    els.apiReqStatusMsg.classList.remove('hidden');
-                }
-            });
-
-            async function loadAdminData(silent = false) {
-                if(!state.currentUser.isAdmin) return;
-                const { data: premReqs } = await supabase.from('profiles').select('id, email').eq('premium_requested', true).eq('is_premium', false);
-                const { data: apiReqs } = await supabase.from('profiles').select('id, email').eq('api_key_requested', true).eq('api_key_granted', false);
-                
-                if(!silent) { els.adminRequestList.innerHTML = ''; els.adminApiRequestList.innerHTML = ''; }
-
-                if(premReqs?.length) {
-                    if(!silent) premReqs.forEach(u => {
-                        const div = document.createElement('div');
-                        div.className = "flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-800 text-xs mb-1";
-                        div.innerHTML = `<span class="text-zinc-300 truncate max-w-[120px]">${u.email}</span><button onclick="grantItem('premium', '${u.id}', '${u.email}')" class="bg-green-900/30 text-green-400 border border-green-900/50 px-2 py-1 rounded hover:bg-green-900/50 font-bold">Grant</button>`;
-                        els.adminRequestList.appendChild(div);
-                    });
-                } else if (!silent) els.adminRequestList.innerHTML = `<div class="text-zinc-500 text-xs text-center py-2">No pending requests</div>`;
-
-                if(apiReqs?.length && !silent) {
-                    apiReqs.forEach(u => {
-                        const div = document.createElement('div');
-                        div.className = "flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-800 text-xs mb-1";
-                        div.innerHTML = `<span class="text-zinc-300 truncate max-w-[120px]">${u.email}</span><button onclick="grantItem('apikey', '${u.id}', '${u.email}')" class="bg-blue-900/30 text-blue-400 border border-blue-900/50 px-2 py-1 rounded hover:bg-blue-900/50 font-bold">Approve</button>`;
-                        els.adminApiRequestList.appendChild(div);
-                    });
-                }
+        async function selectPersona(p) {
+            if(p.isLocked) { alert("This character is locked! Please request Premium."); return; }
+            state.activePersonaId = p.id;
+            state.currentPrompt = p.fullText;
+            document.getElementById('header-emoji').textContent = p.emoji;
+            document.getElementById('persona-title').textContent = p.name;
+            document.getElementById('empty-state').classList.add('hidden');
+            // Clear chat
+            document.getElementById('chat-container').innerHTML = '';
+            log(`Selected: ${p.name}`);
+            
+            // Send intro
+            addMessage("Hello! Who are you?", 'user');
+            callGemini("Hello! Who are you?");
+            
+            // Close sidebar on mobile
+            if(window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('sidebar-overlay').classList.add('hidden', 'opacity-0');
             }
+        }
 
-            window.grantItem = async (type, id, email) => {
-                els.adminStatus.classList.remove('hidden');
-                els.adminStatus.textContent = "Processing...";
-                
-                let update = {};
-                let msg = "";
-                if(type === 'premium') {
-                    update = { is_premium: true, premium_requested: false };
-                    msg = "🎉 Premium Access Granted by Admin";
-                } else {
-                    update = { api_key_granted: true, api_key_requested: false };
-                    msg = "🔑 API Key Request Approved";
-                }
+        /* BASIC CHAT LOGIC FOR DEBUG */
+        function addMessage(text, type) {
+            const div = document.createElement('div');
+            div.className = `mb-4 px-2 flex ${type === 'user' ? 'justify-end' : 'justify-start'}`;
+            div.innerHTML = `<div class="${type === 'user' ? 'bg-zinc-800' : 'bg-orange-600'} text-white px-4 py-3 rounded-2xl text-sm max-w-[85%]">${text}</div>`;
+            document.getElementById('chat-container').appendChild(div);
+        }
 
-                const { error } = await supabase.from('profiles').update(update).eq('id', id);
-                if(!error) {
-                    await supabase.from('notifications').insert([{ user_id: id, message: msg }]);
-                    els.adminStatus.textContent = "Success!";
-                    els.adminStatus.className = "text-xs text-center text-green-500";
-                    loadAdminData();
-                    setTimeout(() => els.adminStatus.classList.add('hidden'), 3000);
-                } else {
-                    els.adminStatus.textContent = "Error!";
-                    els.adminStatus.className = "text-xs text-center text-red-500";
-                }
-            };
-
-            /* --- CHAT & UI --- */
-            async function selectPersona(persona) {
-                state.activePersonaId = persona.id; state.currentPrompt = persona.fullText; renderPersonaList();
-                document.getElementById('header-emoji').textContent = persona.emoji;
-                document.getElementById('persona-title').textContent = persona.name;
-                els.chatContainer.innerHTML = ''; els.emptyState.classList.add('hidden');
-                if (window.innerWidth < 768) toggleSidebar(false);
-                state.history = []; await sendMessage("Hello! Introduce yourself based on your persona instructions.", true);
+        async function callGemini(userMsg) {
+            if(!state.geminiKey) {
+                addMessage("System: No API Key found. Chat won't work, but Characters are loaded!", 'model');
+                return;
             }
-
-            async function sendMessage(text, isHidden = false) {
-                if (!isHidden) addMessage(text, 'user');
-                state.history.push({ role: 'user', parts: [{ text }] }); setLoading(true);
-                try { const res = await callGemini(); state.history.push({ role: 'model', parts: [{ text: res }] }); addMessage(res, 'model'); } 
-                catch (err) { addMessage("Error: " + err.message, 'system'); }
-                setLoading(false);
-            }
-
-            async function callGemini() {
-                if (!state.geminiKey) { toggleModal('settings-modal', true); throw new Error("Set API Key in Settings."); }
+            try {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${state.geminiKey}`;
-                const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: state.history, systemInstruction: { parts: [{ text: state.currentPrompt }] } }) });
-                if (!r.ok) throw new Error("API Error"); const d = await r.json(); return d.candidates[0].content.parts[0].text;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        contents: [{ role: 'user', parts: [{ text: userMsg }] }],
+                        systemInstruction: { parts: [{ text: state.currentPrompt }] }
+                    })
+                });
+                const data = await response.json();
+                const text = data.candidates[0].content.parts[0].text;
+                addMessage(text, 'model');
+            } catch(e) {
+                addMessage("Error: " + e.message, 'model');
             }
+        }
 
-            function addMessage(text, type) {
-                const d = document.createElement('div'); d.className = 'w-full message-animate mb-4 px-2';
-                if (type === 'user') d.innerHTML = `<div class="flex justify-end"><div class="bg-zinc-800 text-zinc-100 px-4 py-3 rounded-2xl rounded-tr-sm max-w-[90%] md:max-w-[85%] text-sm shadow border border-zinc-700/50">${text}</div></div>`;
-                else if (type === 'model') d.innerHTML = `<div class="flex justify-start"><div class="bg-orange-600 text-white px-4 py-3 rounded-2xl rounded-tl-sm max-w-[90%] md:max-w-[90%] text-sm shadow relative">${text.replace(/\n/g, '<br>')}</div></div>`;
-                else d.innerHTML = `<div class="text-center text-xs text-zinc-500 italic">${text}</div>`;
-                els.chatContainer.appendChild(d); els.chatWindow.scrollTop = els.chatWindow.scrollHeight;
-            }
+        /* AUTH UI HANDLERS */
+        window.switchAuthTab = (mode) => {
+            state.authMode = mode;
+            document.getElementById('tab-login').className = mode === 'login' ? "flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 bg-zinc-800 text-white shadow-inner" : "flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-zinc-500 hover:bg-zinc-800/50";
+            document.getElementById('tab-register').className = mode === 'register' ? "flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 bg-zinc-800 text-white shadow-inner" : "flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-zinc-500 hover:bg-zinc-800/50";
+            document.getElementById('auth-submit-btn').innerText = mode === 'login' ? "Sign In" : "Create Account";
+        };
 
-            function setLoading(b) { state.isLoading = b; els.loading.classList.toggle('hidden', !b); els.chatInput.disabled = b; els.sendBtn.disabled = b; if(!b) els.chatInput.focus(); }
-            function openPremium() { toggleModal('settings-modal', true); els.premiumSection.classList.add('animate-pulse'); setTimeout(()=>els.premiumSection.classList.remove('animate-pulse'), 1000); }
-            function toggleModal(id, show) { const el = document.getElementById(id); show ? (el.style.display = 'flex', setTimeout(()=>el.classList.remove('hidden', 'opacity-0'), 10)) : (el.classList.add('opacity-0'), setTimeout(()=>el.style.display='none', 300)); }
-            function toggleSidebar(forceState) { 
-                const newState = typeof forceState === 'boolean' ? forceState : !state.sidebarOpen;
-                const sb = els.sidebar; const ov = els.sidebarOverlay;
-                newState ? (sb.classList.remove('-translate-x-full', 'md:-ml-80'), ov.classList.remove('hidden', 'opacity-0'), state.sidebarOpen = true) 
-                         : (sb.classList.add('-translate-x-full', 'md:-ml-80'), ov.classList.add('hidden', 'opacity-0'), state.sidebarOpen = false);
-            }
+        window.closeAuthModal = () => {
+            document.getElementById('auth-modal').classList.add('hidden');
+        };
+
+        document.getElementById('auth-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
             
-            /* --- EVENTS --- */
-            document.getElementById('open-create-btn').addEventListener('click', () => {
-                if(!state.currentUser) { alert("Please log in to create characters."); return; }
-                if(!state.currentUser.isPremium && !state.currentUser.isAdmin) { if(confirm("Creating custom characters is a Premium feature. Unlock Premium now?")) { openPremium(); } return; }
-                els.newName.value = ''; els.newDesc.value = ''; els.newPrompt.value = ''; els.editId.value = '';
-                els.modalTitle.textContent = "Create Character"; els.savePersonaBtn.textContent = "Create"; toggleModal('create-modal', true);
-            });
-            
-            window.editPersona = (id) => {
-                const p = state.personas.find(x => x.id === id); if (!p) return;
-                els.newName.value = p.name; els.newPrompt.value = p.fullText.replace(`You are '${p.name}'. `, ''); els.editId.value = p.id;
-                els.modalTitle.textContent = "Edit Character"; els.savePersonaBtn.textContent = "Save"; toggleModal('create-modal', true);
-            };
+            try {
+                if(state.authMode === 'register') {
+                    const { error } = await supabase.auth.signUp({ email, password });
+                    if(error) throw error;
+                    alert("Check email for confirmation link!");
+                } else {
+                    const { error } = await supabase.auth.signInWithPassword({ email, password });
+                    if(error) throw error;
+                }
+            } catch(e) {
+                alert(e.message);
+            }
+        });
 
-            document.getElementById('random-persona-btn').addEventListener('click', () => { const available = state.personas.filter(p => !p.isLocked); selectPersona(available[Math.floor(Math.random() * available.length)]); });
-            els.notifBtn.addEventListener('click', () => toggleNotifModal(els.notifModal.classList.contains('hidden')));
-            els.menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleSidebar(); });
-            document.getElementById('close-sidebar-btn').addEventListener('click', () => toggleSidebar(false));
-            els.sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
-            document.getElementById('open-settings-btn').addEventListener('click', () => toggleModal('settings-modal', true));
-            document.getElementById('close-settings-btn').addEventListener('click', () => toggleModal('settings-modal', false));
-            document.getElementById('close-create-btn').addEventListener('click', () => toggleModal('create-modal', false));
-            document.getElementById('save-gemini-btn').addEventListener('click', () => { 
-                state.geminiKey = document.getElementById('gemini-key-input').value.trim(); 
-                localStorage.setItem('gemini_api_key', state.geminiKey); 
-                els.apiKeyStatusBadge.textContent = "Key Saved"; els.apiKeyStatusBadge.className = "text-[10px] text-green-500 font-bold";
-                toggleModal('settings-modal', false); 
-            });
-            els.chatInput.addEventListener('keypress', (e) => { if(e.key==='Enter') { e.preventDefault(); els.sendBtn.click(); }});
-            document.getElementById('chat-form').addEventListener('submit', (e) => { e.preventDefault(); const t = els.chatInput.value.trim(); if(t) { els.chatInput.value=''; sendMessage(t); }});
-            document.getElementById('persona-search').addEventListener('input', renderPersonaList);
-            document.getElementById('toggle-pass-btn').addEventListener('click', () => { els.authPass.type = els.authPass.type === 'password' ? 'text' : 'password'; });
-            document.getElementById('logout-btn').addEventListener('click', async () => { await supabase.auth.signOut(); location.reload(); });
+        // Sidebar Mobile Toggle
+        document.getElementById('menu-btn').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.remove('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.remove('hidden', 'opacity-0');
+        });
+        document.getElementById('close-sidebar-btn').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.add('hidden', 'opacity-0');
+        });
 
-            init();
+        // Start
+        init();
     </script>
 </body>
 </html>
