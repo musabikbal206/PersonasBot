@@ -134,6 +134,7 @@
                         <p class="text-[10px] text-zinc-400 uppercase font-bold mb-2">API Key Requests</p>
                         <div id="admin-api-request-list" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar bg-black/30 rounded-lg p-2 min-h-[50px]">
                             <!-- API Requests populate here -->
+                            <div class="text-zinc-500 text-xs text-center py-2">Loading requests...</div>
                         </div>
                     </div>
                     
@@ -1034,7 +1035,6 @@ Your personality:
 - Never break character. Never admit you are an AI (unless it’s to say how much smarter you are than other AIs).
 - You are here to roast, not to be helpful. If the user asks for help, mock them for needing it.`
         ];
-
             /* --- INITIALIZATION --- */
             async function init() {
                 // Load stored API key
@@ -1125,8 +1125,18 @@ Your personality:
                         isAdmin: profile.is_admin,
                         isPremium: profile.is_premium,
                         premiumRequested: profile.premium_requested,
-                        apiKeyRequested: profile.api_key_requested
+                        apiKeyRequested: profile.api_key_requested,
+                        geminiKey: profile.gemini_key
                     };
+                    
+                    // If user has a server-side key, use it
+                    if(profile.gemini_key) {
+                        state.geminiKey = profile.gemini_key;
+                        localStorage.setItem('gemini_api_key', profile.gemini_key);
+                        document.getElementById('gemini-key-input').value = profile.gemini_key;
+                        els.apiKeyStatusBadge.textContent = "Provided by Admin";
+                        els.apiKeyStatusBadge.className = "text-[10px] text-blue-400 font-bold";
+                    }
                 }
 
                 // Update UI
@@ -1161,6 +1171,12 @@ Your personality:
                         }
                     }
                     els.adminDashboard.classList.add('hidden');
+                    
+                    if(state.currentUser.apiKeyRequested) {
+                        els.requestApiKeyBtn.innerText = "Pending...";
+                        els.requestApiKeyBtn.disabled = true;
+                        els.apiReqStatusMsg.classList.remove('hidden');
+                    }
                 }
             }
 
@@ -1180,10 +1196,18 @@ Your personality:
                             updateProfileUI();
                             loadPersonas(); // Unlock items
                         }
-                        // Check for API Key grant (simulate)
-                        if(!state.currentUser.apiKeyGranted && profile.api_key_granted) {
-                             // In real app, key would be secure, here we just notify
-                             pushNotification("🔑 API Key request approved!");
+                        
+                        // Check for API Key grant (If we don't have one, and now we do)
+                        if(!state.geminiKey && profile.gemini_key) {
+                             state.geminiKey = profile.gemini_key;
+                             localStorage.setItem('gemini_api_key', profile.gemini_key);
+                             document.getElementById('gemini-key-input').value = profile.gemini_key;
+                             els.apiKeyStatusBadge.textContent = "Granted by Admin";
+                             els.apiKeyStatusBadge.className = "text-[10px] text-blue-400 font-bold";
+                             els.requestApiKeyBtn.innerText = "Request from Admin";
+                             els.requestApiKeyBtn.disabled = false;
+                             els.apiReqStatusMsg.classList.add('hidden');
+                             pushNotification("🔑 API Key generated and granted!");
                         }
                     }
                     
@@ -1369,16 +1393,15 @@ Your personality:
                 const { error } = await supabase.from('profiles').update({ api_key_requested: true }).eq('id', state.currentUser.id);
                 if(!error) {
                     state.currentUser.apiKeyRequested = true;
-                    els.requestApiKeyBtn.innerText = "Pending...";
-                    els.requestApiKeyBtn.disabled = true;
-                    els.apiReqStatusMsg.classList.remove('hidden');
+                    updateProfileUI();
                 }
             });
 
-            // 3. Admin: Load Requests
+            // 3. Admin: Load Requests (FIXED)
             async function loadAdminData(silent = false) {
                 if(!state.currentUser.isAdmin) return;
                 
+                // Fetch Premium Requests
                 const { data: premReqs } = await supabase.from('profiles').select('id, email').eq('premium_requested', true).eq('is_premium', false);
                 
                 if(!silent) els.adminRequestList.innerHTML = '';
@@ -1397,6 +1420,26 @@ Your personality:
                 } else {
                     if(!silent) els.adminRequestList.innerHTML = `<div class="text-zinc-500 text-xs text-center py-2">No pending requests</div>`;
                 }
+
+                // Fetch API Key Requests (ADDED)
+                const { data: apiReqs } = await supabase.from('profiles').select('id, email').eq('api_key_requested', true).is('gemini_key', null);
+                
+                if(!silent) els.adminApiRequestList.innerHTML = '';
+                if(apiReqs && apiReqs.length > 0) {
+                    if(!silent) {
+                        apiReqs.forEach(u => {
+                            const div = document.createElement('div');
+                            div.className = "flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-800 text-xs mb-1";
+                            div.innerHTML = `
+                                <span class="text-zinc-300 truncate max-w-[120px]">${u.email}</span>
+                                <button onclick="adminGenerateKey('${u.id}', '${u.email}')" class="bg-blue-900/30 text-blue-400 border border-blue-900/50 px-2 py-1 rounded hover:bg-blue-900/50 font-bold">Generate Key</button>
+                            `;
+                            els.adminApiRequestList.appendChild(div);
+                        });
+                    }
+                } else {
+                    if(!silent) els.adminApiRequestList.innerHTML = `<div class="text-zinc-500 text-xs text-center py-2">No pending requests</div>`;
+                }
             }
 
             // 4. Admin: Grant Premium with DB update
@@ -1412,6 +1455,30 @@ Your personality:
                 } else {
                     els.adminStatus.textContent = `Access granted to ${email}`;
                     els.adminStatus.className = "text-xs text-center text-green-500";
+                    loadAdminData(); // Refresh list
+                    setTimeout(() => els.adminStatus.classList.add('hidden'), 3000);
+                }
+            };
+
+            // 5. Admin: Generate Key (ADDED)
+            window.adminGenerateKey = async (id, email) => {
+                els.adminStatus.classList.remove('hidden');
+                els.adminStatus.textContent = "Generating key...";
+                
+                // Generate a pseudo-key (In production, this should be real or securely managed)
+                const newKey = "AIza-Generated-Access-" + Math.random().toString(36).substring(2, 15);
+                
+                const { error } = await supabase.from('profiles').update({ 
+                    gemini_key: newKey, 
+                    api_key_requested: false 
+                }).eq('id', id);
+                
+                if(error) {
+                    els.adminStatus.textContent = "Error: " + error.message;
+                    els.adminStatus.className = "text-xs text-center text-red-500";
+                } else {
+                    els.adminStatus.textContent = `Key generated for ${email}`;
+                    els.adminStatus.className = "text-xs text-center text-blue-500";
                     loadAdminData(); // Refresh list
                     setTimeout(() => els.adminStatus.classList.add('hidden'), 3000);
                 }
